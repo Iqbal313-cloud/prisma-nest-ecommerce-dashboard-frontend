@@ -1,69 +1,177 @@
-import { useState } from "react";
-import { useGetProductsQuery } from "../../../api/productApi";
-import Pagination from "../../../components/common/Pagination";
+// import { useState } from "react";
 
+// import { useGetProductsQuery } from "@/api/productApi";
+// import Pagination from "@/components/common/Pagination";
+
+// import ProductTable from "../components/ProductTable";
+
+// function ProductListPage() {
+//   const [page, setPage] = useState(1);
+//   const [limit, setLimit] = useState(10);
+
+//   const { data, isLoading, isFetching, isError } = useGetProductsQuery({
+//     page,
+//     limit,
+//   });
+
+//   const handleLimitChange = (newLimit: number) => {
+//     setLimit(newLimit);
+//   };
+
+//   if (isError) {
+//     return (
+//       <div className="rounded-xl border border-red-200 bg-red-50 p-6">
+//         <h2 className="font-semibold text-red-700">Failed to load products</h2>
+
+//         <p className="mt-1 text-sm text-red-600">
+//           Something went wrong while loading the products.
+//         </p>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="space-y-6">
+//       {/* Page Header */}
+//       <div>
+//         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+//           Products
+//         </h1>
+
+//         <p className="mt-1 text-sm text-slate-500">
+//           Manage your products and inventory.
+//         </p>
+//       </div>
+
+//       {/* Product Table */}
+//       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+//         <div className="relative">
+//           {isFetching && !isLoading && (
+//             <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-slate-100">
+//               <div className="h-full w-1/3 animate-pulse bg-slate-900" />
+//             </div>
+//           )}
+
+//           <ProductTable products={data?.data ?? []} isLoading={isLoading} />
+//         </div>
+
+//         {/* Pagination */}
+//         {data && (
+//           <Pagination
+//             page={data.meta.page}
+//             lastPage={data.meta.lastPage}
+//             total={data.meta.total}
+//             limit={data.meta.limit}
+//             onPageChange={setPage}
+//             onLimitChange={handleLimitChange}
+//           />
+//         )}
+//       </div>
+//     </div>
+//   );
+// }
+
+// export default ProductListPage;
+
+import { useState } from "react";
+
+import { useGetProductsQuery } from "@/api/productApi";
+
+import Pagination from "@/components/common/Pagination";
+
+import ProductFilters from "../components/ProductFilters";
+import ProductTable from "../components/ProductTable";
+
+import type { ProductFilters as ProductFilterValues } from "../types/product.types";
+
+const DEFAULT_FILTERS: ProductFilterValues = {};
 
 function ProductListPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  const { data, isLoading, isError } = useGetProductsQuery({
+  // Form-এর temporary filter
+  const [filters, setFilters] = useState<ProductFilterValues>(DEFAULT_FILTERS);
+
+  // API-তে যেই filter পাঠানো হচ্ছে
+  const [appliedFilters, setAppliedFilters] =
+    useState<ProductFilterValues>(DEFAULT_FILTERS);
+
+  const { data, isLoading, isFetching, isError } = useGetProductsQuery({
     page,
     limit,
+    ...appliedFilters,
   });
 
-  const handleLimitChange = (newLimit: number) => {
-    setLimit(newLimit);
+  const handleFilterChange = <K extends keyof ProductFilterValues>(
+    key: K,
+    value: ProductFilterValues[K],
+  ) => {
+    setFilters((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+  };
+
+  const handleSearch = () => {
+    setPage(1);
+    setAppliedFilters(filters);
+  };
+
+  const handleClear = () => {
+    setFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
     setPage(1);
   };
 
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+  };
+
   if (isLoading) {
-    return <div>Loading products...</div>;
+    return (
+      <div className="flex min-h-[300px] items-center justify-center">
+        <p className="text-sm text-slate-500">Loading products...</p>
+      </div>
+    );
   }
 
   if (isError) {
-    return <div>Failed to load products.</div>;
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+        <p className="text-sm font-medium text-red-600">
+          Failed to load products.
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold">Products</h1>
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          Products
+        </h1>
 
-      <div className="overflow-hidden rounded-lg bg-white">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                <th className="px-4 py-3">ID</th>
-                <th className="px-4 py-3">Product</th>
-                <th className="px-4 py-3">SKU</th>
-                <th className="px-4 py-3">Category</th>
-                <th className="px-4 py-3">Price</th>
-                <th className="px-4 py-3">Stock</th>
-              </tr>
-            </thead>
+        <p className="mt-1 text-sm text-slate-500">
+          Manage your products, inventory and product information.
+        </p>
+      </div>
 
-            <tbody>
-              {data?.data.map((product) => (
-                <tr key={product.id} className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-3">{product.id}</td>
+      {/* Filters */}
+      <div className="rounded-lg border border-slate-200 bg-white p-4">
+        <ProductFilters
+          filters={filters}
+          onFilterChange={handleFilterChange}
+          onSearch={handleSearch}
+          onClear={handleClear}
+        />
+      </div>
 
-                  <td className="px-4 py-3 font-medium">
-                    {product.productName}
-                  </td>
-
-                  <td className="px-4 py-3">{product.sku}</td>
-
-                  <td className="px-4 py-3">{product.category.categoryName}</td>
-
-                  <td className="px-4 py-3">৳{product.unitPrice}</td>
-
-                  <td className="px-4 py-3">{product.unitsInStock}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Table */}
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+        {data && <ProductTable products={data.data} />}
 
         {data && (
           <Pagination
@@ -71,6 +179,7 @@ function ProductListPage() {
             lastPage={data.meta.lastPage}
             total={data.meta.total}
             limit={data.meta.limit}
+            isFetching={isFetching}
             onPageChange={setPage}
             onLimitChange={handleLimitChange}
           />

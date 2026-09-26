@@ -5,6 +5,7 @@ interface PaginationProps {
   limit: number;
   onPageChange: (page: number) => void;
   onLimitChange?: (limit: number) => void;
+  isFetching?: boolean;
 }
 
 const LIMIT_OPTIONS = [10, 20, 50, 100];
@@ -16,27 +17,33 @@ function Pagination({
   limit,
   onPageChange,
   onLimitChange,
+  isFetching = false,
 }: PaginationProps) {
   const canGoPrevious = page > 1;
   const canGoNext = page < lastPage;
 
   return (
-    <div className="flex flex-col gap-4 border-t bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-4 border-t border-slate-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       {/* Total */}
       <div className="text-sm text-slate-500">
-        Total: <span className="font-medium text-slate-700">{total}</span>
+        Showing{" "}
+        <span className="font-medium text-slate-900">
+          {total.toLocaleString()}
+        </span>{" "}
+        results
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-4 sm:gap-6">
         {/* Limit */}
         {onLimitChange && (
           <div className="flex items-center gap-2 text-sm">
-            <span className="text-slate-500">Per page</span>
+            <span className="text-slate-500">Rows per page</span>
 
             <select
               value={limit}
+              disabled={isFetching}
               onChange={(event) => onLimitChange(Number(event.target.value))}
-              className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm outline-none focus:border-slate-500"
+              className="h-9 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm text-slate-700 shadow-xs transition-colors focus:border-slate-400 focus:outline-none focus:ring-1 focus:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {LIMIT_OPTIONS.map((option) => (
                 <option key={option} value={option}>
@@ -48,27 +55,29 @@ function Pagination({
         )}
 
         {/* Page info */}
-        <div className="text-sm text-slate-500">
-          Page <span className="font-medium text-slate-700">{page}</span> of{" "}
-          <span className="font-medium text-slate-700">{lastPage}</span>
+        <div className="text-sm font-medium text-slate-700">
+          Page <span className="text-slate-900">{page}</span> of{" "}
+          <span className="text-slate-900">{lastPage}</span>
         </div>
 
         {/* Buttons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          {/* Previous */}
           <button
             type="button"
-            disabled={!canGoPrevious}
+            disabled={!canGoPrevious || isFetching}
             onClick={() => onPageChange(page - 1)}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:pointer-events-none disabled:opacity-50"
           >
             Previous
           </button>
 
+          {/* Next */}
           <button
             type="button"
-            disabled={!canGoNext}
+            disabled={!canGoNext || isFetching}
             onClick={() => onPageChange(page + 1)}
-            className="rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-xs transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-slate-900 disabled:pointer-events-none disabled:opacity-50"
           >
             Next
           </button>
