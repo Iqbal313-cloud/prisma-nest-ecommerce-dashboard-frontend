@@ -1,30 +1,27 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Layout from "./components/layout/Layout";
-import Dashboard from "./features/dashboard/pages/DashboardPage";
+import DashboardPage from "./features/dashboard/pages/DashboardPage";
 import ProductListPage from "./features/products/pages/ProductListPage";
-import CategoryListPage from "./features/categories/pages/CategoryListPage";
-import OrderListPage from "./features/orders/pages/OrderListPage";
-import CustomerListPage from "./features/customers/pages/CustomerListPage";
-import EmployeeListPage from "./features/employees/pages/EmployeeListPage";
-import SupplierListPage from "./features/suppliers/pages/SupplierListPage";
-
-
+import ProductCreatePage from "./features/products/pages/ProductCreatePage";
+import ProductDetailsPage from "./features/products/pages/ProductDetailsPage";
+import ProductEditPage from "./features/products/pages/ProductEditPage";
 function App() {
   return (
     <BrowserRouter>
+      {" "}
       <Layout>
+        {" "}
         <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/products" element={<ProductListPage />} />
-          <Route path="/categories" element={<CategoryListPage />} />
-          <Route path="/orders" element={<OrderListPage />} />
-          <Route path="/customers" element={<CustomerListPage />} />
-          <Route path="/employees" element={<EmployeeListPage />} />
-          <Route path="/suppliers" element={<SupplierListPage />} />
-        </Routes>
-      </Layout>
+          {" "}
+          {/* Dashboard */} <Route path="/" element={<DashboardPage />} />{" "}
+          {/* Products */}{" "}
+          <Route path="/products" element={<ProductListPage />} />{" "}
+          <Route path="/products/new" element={<ProductCreatePage />} />{" "}
+          <Route path="/products/:id" element={<ProductDetailsPage />} />{" "}
+          <Route path="/products/:id/edit" element={<ProductEditPage />} />{" "}
+        </Routes>{" "}
+      </Layout>{" "}
     </BrowserRouter>
   );
 }
-
 export default App;

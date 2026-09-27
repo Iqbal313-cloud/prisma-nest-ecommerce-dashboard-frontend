@@ -1,5 +1,8 @@
 import { Search, X } from "lucide-react";
 
+import { useGetCategoriesQuery } from "@/api/categoryApi";
+import { useGetSuppliersQuery } from "@/api/supplierApi";
+
 import type { ProductFilters as ProductFilterValues } from "../types/product.types";
 
 interface ProductFiltersProps {
@@ -18,6 +21,17 @@ function ProductFilters({
   onSearch,
   onClear,
 }: ProductFiltersProps) {
+  const { data: categories = [], isLoading: isCategoriesLoading } =
+    useGetCategoriesQuery();
+
+  const { data: suppliersData, isLoading: isSuppliersLoading } =
+    useGetSuppliersQuery({
+      page: 1,
+      limit: 100,
+    });
+
+  const suppliers = suppliersData?.data ?? [];
+
   const hasFilter =
     !!filters.productName?.trim() ||
     !!filters.slug?.trim() ||
@@ -70,10 +84,18 @@ function ProductFilters({
               event.target.value ? Number(event.target.value) : undefined,
             )
           }
-          className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 lg:w-[190px]"
+          disabled={isCategoriesLoading}
+          className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 disabled:cursor-not-allowed disabled:bg-slate-50 lg:w-[190px]"
         >
-          <option value="">All Categories</option>
-          {/* Categories API থেকে আসবে */}
+          <option value="">
+            {isCategoriesLoading ? "Loading categories..." : "All Categories"}
+          </option>
+
+          {categories.map((category) => (
+            <option key={category.id} value={category.id}>
+              {category.categoryName}
+            </option>
+          ))}
         </select>
 
         {/* Status */}
@@ -143,10 +165,18 @@ function ProductFilters({
               event.target.value ? Number(event.target.value) : undefined,
             )
           }
-          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500"
+          disabled={isSuppliersLoading}
+          className="h-10 rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-700 outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 disabled:cursor-not-allowed disabled:bg-slate-50"
         >
-          <option value="">All Suppliers</option>
-          {/* Suppliers API থেকে আসবে */}
+          <option value="">
+            {isSuppliersLoading ? "Loading suppliers..." : "All Suppliers"}
+          </option>
+
+          {suppliers.map((supplier) => (
+            <option key={supplier.id} value={supplier.id}>
+              {supplier.supplierName}
+            </option>
+          ))}
         </select>
 
         {/* Min Price */}

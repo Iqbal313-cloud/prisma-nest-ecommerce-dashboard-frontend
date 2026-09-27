@@ -1,88 +1,14 @@
-// import { useState } from "react";
-
-// import { useGetProductsQuery } from "@/api/productApi";
-// import Pagination from "@/components/common/Pagination";
-
-// import ProductTable from "../components/ProductTable";
-
-// function ProductListPage() {
-//   const [page, setPage] = useState(1);
-//   const [limit, setLimit] = useState(10);
-
-//   const { data, isLoading, isFetching, isError } = useGetProductsQuery({
-//     page,
-//     limit,
-//   });
-
-//   const handleLimitChange = (newLimit: number) => {
-//     setLimit(newLimit);
-//   };
-
-//   if (isError) {
-//     return (
-//       <div className="rounded-xl border border-red-200 bg-red-50 p-6">
-//         <h2 className="font-semibold text-red-700">Failed to load products</h2>
-
-//         <p className="mt-1 text-sm text-red-600">
-//           Something went wrong while loading the products.
-//         </p>
-//       </div>
-//     );
-//   }
-
-//   return (
-//     <div className="space-y-6">
-//       {/* Page Header */}
-//       <div>
-//         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-//           Products
-//         </h1>
-
-//         <p className="mt-1 text-sm text-slate-500">
-//           Manage your products and inventory.
-//         </p>
-//       </div>
-
-//       {/* Product Table */}
-//       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-//         <div className="relative">
-//           {isFetching && !isLoading && (
-//             <div className="absolute inset-x-0 top-0 z-10 h-0.5 overflow-hidden bg-slate-100">
-//               <div className="h-full w-1/3 animate-pulse bg-slate-900" />
-//             </div>
-//           )}
-
-//           <ProductTable products={data?.data ?? []} isLoading={isLoading} />
-//         </div>
-
-//         {/* Pagination */}
-//         {data && (
-//           <Pagination
-//             page={data.meta.page}
-//             lastPage={data.meta.lastPage}
-//             total={data.meta.total}
-//             limit={data.meta.limit}
-//             onPageChange={setPage}
-//             onLimitChange={handleLimitChange}
-//           />
-//         )}
-//       </div>
-//     </div>
-//   );
-// }
-
-// export default ProductListPage;
-
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import { useGetProductsQuery } from "@/api/productApi";
-
 import Pagination from "@/components/common/Pagination";
 
 import ProductFilters from "../components/ProductFilters";
 import ProductTable from "../components/ProductTable";
 
 import type { ProductFilters as ProductFilterValues } from "../types/product.types";
+import Loading from "@/common/Loading";
 
 const DEFAULT_FILTERS: ProductFilterValues = {};
 
@@ -129,11 +55,7 @@ function ProductListPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-[300px] items-center justify-center">
-        <p className="text-sm text-slate-500">Loading products...</p>
-      </div>
-    );
+    return <Loading message="Loading products..." />;
   }
 
   if (isError) {
@@ -149,14 +71,25 @@ function ProductListPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Products
-        </h1>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Products
+          </h1>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Manage your products, inventory and product information.
-        </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Manage your products, inventory and product information.
+          </p>
+        </div>
+
+        {/* Create Product Button */}
+        <Link
+          to="/products/new"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          <span className="text-lg leading-none">+</span>
+          Create Product
+        </Link>
       </div>
 
       {/* Filters */}

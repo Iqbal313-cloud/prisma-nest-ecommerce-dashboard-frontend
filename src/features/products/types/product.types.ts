@@ -40,10 +40,25 @@ export interface Product {
   unitsInStock: number;
   unitsOnOrder: number;
   discontinued: boolean;
-  category: ProductCategory;
-  supplier: ProductSupplier;
+  category: ProductCategory | null;
+  supplier: ProductSupplier | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export interface CreateProductPayload {
+  productName: string;
+  shortDescription?: string;
+  description?: string;
+  quantityPerUnit?: string;
+  unitPrice?: number;
+  unitsInStock?: number;
+  unitsOnOrder?: number;
+  discontinued?: boolean;
+  categoryId?: number;
+  supplierId?: number;
+}
+
+export type UpdateProductPayload = Partial<CreateProductPayload>;
 
 export type ProductResponse = PaginatedResponse<Product>;
