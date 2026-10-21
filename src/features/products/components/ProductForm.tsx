@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import {
@@ -13,6 +13,14 @@ import type {
   Product,
   UpdateProductPayload,
 } from "../types/product.types";
+import {
+  AlertCircle,
+  CircleCheck,
+  CircleX,
+  ListFilter,
+  Package,
+  Tag,
+} from "lucide-react";
 
 interface ProductFormProps {
   product?: Product;
@@ -76,6 +84,12 @@ function ProductForm({ product, mode = "create" }: ProductFormProps) {
   const [form, setForm] = useState<FormState>(() =>
     getInitialFormState(product),
   );
+
+  useEffect(() => {
+    if (product) {
+      setForm(getInitialFormState(product));
+    }
+  }, [product]);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -235,18 +249,7 @@ function ProductForm({ product, mode = "create" }: ProductFormProps) {
 
       {error && (
         <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5 text-sm text-red-700 shadow-sm">
-          <svg
-            className="mt-0.5 h-5 w-5 shrink-0"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm-.75-11a.75.75 0 011.5 0v4a.75.75 0 01-1.5 0V7zm0 6a.75.75 0 011.5 0v.25a.75.75 0 01-1.5 0V13z"
-              clipRule="evenodd"
-            />
-          </svg>
-
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
           <div>
             <p className="font-medium">Unable to save product</p>
             <p className="mt-0.5 text-red-600">{error}</p>
@@ -262,24 +265,7 @@ function ProductForm({ product, mode = "create" }: ProductFormProps) {
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-5">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M16 11a4 4 0 10-8 0 4 4 0 008 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 20a8 8 0 0116 0"
-                />
-              </svg>
+              <Package className="h-5 w-5" strokeWidth={1.8} />
             </div>
 
             <div>
@@ -395,19 +381,7 @@ function ProductForm({ product, mode = "create" }: ProductFormProps) {
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-5">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 3v18M17 7.5C17 6.1 14.8 5 12 5S7 6.1 7 7.5 9.2 10 12 10s5 1.1 5 2.5S14.8 15 12 15s-5 1.1-5 2.5S9.2 20 12 20s5-1.1 5-2.5"
-                />
-              </svg>
+              <Tag className="h-5 w-5" strokeWidth={1.8} />
             </div>
 
             <div>
@@ -508,40 +482,7 @@ function ProductForm({ product, mode = "create" }: ProductFormProps) {
         <div className="border-b border-slate-100 bg-slate-50/50 px-6 py-5">
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
-              <svg
-                className="h-5 w-5"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4 7h16M4 12h16M4 17h16"
-                />
-                <circle
-                  cx="8"
-                  cy="7"
-                  r="1.5"
-                  fill="currentColor"
-                  stroke="none"
-                />
-                <circle
-                  cx="15"
-                  cy="12"
-                  r="1.5"
-                  fill="currentColor"
-                  stroke="none"
-                />
-                <circle
-                  cx="10"
-                  cy="17"
-                  r="1.5"
-                  fill="currentColor"
-                  stroke="none"
-                />
-              </svg>
+              <ListFilter className="h-5 w-5" strokeWidth={1.8} />
             </div>
 
             <div>
@@ -608,14 +549,16 @@ function ProductForm({ product, mode = "create" }: ProductFormProps) {
               disabled={isSuppliersLoading}
               className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm outline-none transition-all hover:border-slate-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
             >
-              <option value="">
-                {isSuppliersLoading
-                  ? "Loading suppliers..."
-                  : "Select supplier"}
-              </option>
+              {!isEdit && (
+                <option value="">
+                  {isSuppliersLoading
+                    ? "Loading suppliers..."
+                    : "Select supplier"}
+                </option>
+              )}
 
               {suppliers.map((supplier) => (
-                <option key={supplier.id} value={supplier.id}>
+                <option key={supplier.id} value={String(supplier.id)}>
                   {supplier.supplierName}
                 </option>
               ))}
@@ -656,33 +599,9 @@ function ProductForm({ product, mode = "create" }: ProductFormProps) {
                 }`}
               >
                 {form.discontinued ? (
-                  <svg
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <CircleX className="h-5 w-5" strokeWidth={2} />
                 ) : (
-                  <svg
-                    className="h-5 w-5"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <CircleCheck className="h-5 w-5" strokeWidth={2} />
                 )}
               </div>
 

@@ -1,7 +1,8 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useGetProductQuery } from "@/api/productApi";
-import Loading from "@/common/Loading";
-import ErrorMessage from "@/common/ErrorMessage";
+import Loading from "@/components/common/Loading";
+import ErrorMessage from "@/components/common/ErrorMessage";
+
 function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -286,17 +287,19 @@ function InfoItem({ label, value }: InfoItemProps) {
     </div>
   );
 }
-function formatDate(value: string) {
-  if (!value) {
-    return "-";
-  }
+
+function formatDate(value: string | Date | null | undefined) {
+  if (!value) return "-";
+
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
+
+  if (Number.isNaN(date.getTime())) return String(value);
+
   return new Intl.DateTimeFormat("en-BD", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "Asia/Dhaka",
   }).format(date);
 }
+
 export default ProductDetailsPage;

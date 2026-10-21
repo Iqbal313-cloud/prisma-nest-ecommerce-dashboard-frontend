@@ -2,8 +2,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useGetProductQuery } from "@/api/productApi";
 
-import Loading from "@/common/Loading";
-import ErrorMessage from "@/common/ErrorMessage";
+import Loading from "@/components/common/Loading";
+import ErrorMessage from "@/components/common/ErrorMessage";
 
 import ProductForm from "../components/ProductForm";
 

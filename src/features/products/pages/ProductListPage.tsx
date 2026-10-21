@@ -1,34 +1,86 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { useGetProductsQuery } from "@/api/productApi";
+import {
+  useExportProductsMutation,
+  useGetProductsQuery,
+} from "@/api/productApi";
 import Pagination from "@/components/common/Pagination";
 
 import ProductFilters from "../components/ProductFilters";
 import ProductTable from "../components/ProductTable";
 
 import type { ProductFilters as ProductFilterValues } from "../types/product.types";
-import Loading from "@/common/Loading";
+import Loading from "@/components/common/Loading";
+import ErrorMessage from "@/components/common/ErrorMessage";
 
 const DEFAULT_FILTERS: ProductFilterValues = {};
 
 function ProductListPage() {
+  // =========================
+  // Pagination
+  // =========================
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  // Form-এর temporary filter
+  // =========================
+  // Temporary filters
+  // =========================
+  // User বর্তমানে filter form-এ যা পরিবর্তন করছে
   const [filters, setFilters] = useState<ProductFilterValues>(DEFAULT_FILTERS);
 
-  // API-তে যেই filter পাঠানো হচ্ছে
+  // =========================
+  // Applied filters
+  // =========================
+  // Search button চাপার পর যে filter actually API-তে যায়
   const [appliedFilters, setAppliedFilters] =
     useState<ProductFilterValues>(DEFAULT_FILTERS);
 
+  // =========================
+  // Get products
+  // =========================
   const { data, isLoading, isFetching, isError } = useGetProductsQuery({
     page,
     limit,
     ...appliedFilters,
   });
 
+  // =========================
+  // Export products
+  // =========================
+  const [exportProducts, { isLoading: isExporting }] =
+    useExportProductsMutation();
+
+  // =========================
+  // Check active filters
+  // =========================
+  /*
+   * এখানে appliedFilters ব্যবহার করছি।
+   *
+   * তাই user শুধু form-এ কিছু লিখলেই CSV active হবে না।
+   * Search চাপার পর filter apply হলে CSV active হবে।
+   *
+   * false-কে active filter হিসেবে রাখা হয়েছে,
+   * কারণ discontinued=false নিজেও একটি valid filter।
+   */
+  const hasActiveFilters = Object.entries(appliedFilters).some(
+    ([key, value]) => {
+      if (value === undefined || value === null || value === "") {
+        return false;
+      }
+
+      // discontinued=false-ও valid filter
+      if (key === "discontinued") {
+        return typeof value === "boolean";
+      }
+
+      return true;
+    },
+  );
+
+  // =========================
+  // Filter change
+  // =========================
   const handleFilterChange = <K extends keyof ProductFilterValues>(
     key: K,
     value: ProductFilterValues[K],
@@ -39,38 +91,91 @@ function ProductListPage() {
     }));
   };
 
+  // =========================
+  // Search
+  // =========================
   const handleSearch = () => {
     setPage(1);
     setAppliedFilters(filters);
   };
 
+  // =========================
+  // Clear filters
+  // =========================
   const handleClear = () => {
     setFilters(DEFAULT_FILTERS);
     setAppliedFilters(DEFAULT_FILTERS);
     setPage(1);
   };
 
+  // =========================
+  // Pagination limit change
+  // =========================
   const handleLimitChange = (newLimit: number) => {
     setLimit(newLimit);
   };
 
+  // =========================
+  // Export CSV
+  // =========================
+  const handleExport = async () => {
+    if (!hasActiveFilters) {
+      return;
+    }
+
+    try {
+      /*
+       * শুধুমাত্র appliedFilters পাঠানো হচ্ছে।
+       *
+       * page এবং limit এখানে পাঠানো হচ্ছে না।
+       *
+       * Backend matching সব data 1000 করে batch করে
+       * একটি CSV stream করবে।
+       */
+      const blob = await exportProducts(appliedFilters).unwrap();
+
+      // Create temporary object URL
+      const url = window.URL.createObjectURL(blob);
+
+      // Create download link
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = "products.csv";
+
+      // Trigger browser download
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Failed to export products:", error);
+    }
+  };
+
+  // =========================
+  // Loading
+  // =========================
   if (isLoading) {
     return <Loading message="Loading products..." />;
   }
 
+  // =========================
+  // Error
+  // =========================
   if (isError) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-        <p className="text-sm font-medium text-red-600">
-          Failed to load products.
-        </p>
-      </div>
+      <ErrorMessage message="Failed to load products. Please try again later." />
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* =========================
+          Header
+      ========================= */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -82,17 +187,34 @@ function ProductListPage() {
           </p>
         </div>
 
-        {/* Create Product Button */}
-        <Link
-          to="/products/new"
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          <span className="text-lg leading-none">+</span>
-          Create Product
-        </Link>
+        {/* =========================
+            Header Actions
+        ========================= */}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {/* Download CSV */}
+          <button
+            type="button"
+            onClick={handleExport}
+            disabled={!hasActiveFilters || isExporting}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isExporting ? "Exporting..." : "Download CSV"}
+          </button>
+
+          {/* Create Product */}
+          <Link
+            to="/products/new"
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <span className="text-lg leading-none">+</span>
+            Create Product
+          </Link>
+        </div>
       </div>
 
-      {/* Filters */}
+      {/* =========================
+          Filters
+      ========================= */}
       <div className="rounded-lg border border-slate-200 bg-white p-4">
         <ProductFilters
           filters={filters}
@@ -102,10 +224,15 @@ function ProductListPage() {
         />
       </div>
 
-      {/* Table */}
+      {/* =========================
+          Table
+      ========================= */}
       <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
         {data && <ProductTable products={data.data} />}
 
+        {/* =========================
+            Pagination
+        ========================= */}
         {data && (
           <Pagination
             page={data.meta.page}

@@ -128,7 +128,7 @@ export const supplierApi = createApi({
         method: "PATCH",
         body: data,
       }),
-
+      //!Q4z(DF5(.0$&Mwe&P.]&y
       invalidatesTags: (_result, _error, { id }) => [
         {
           type: "Supplier",

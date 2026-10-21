@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { useDeleteProductMutation } from "@/api/productApi";
-import ConfirmDialog from "@/common/ConfirmDialog";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
 
 import {
   Table,
@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/common/Table";
-import EmptyState from "@/common/EmptyState";
+import EmptyState from "@/components/common/EmptyState";
 import type { Product } from "../types/product.types";
 
 interface ProductTableProps {
@@ -56,7 +56,12 @@ function ProductTable({ products }: ProductTableProps) {
   };
 
   if (products.length === 0) {
-    return <EmptyState />;
+    return (
+      <EmptyState
+        title="No products found"
+        description="Try changing your search or adjusting your filters."
+      />
+    );
   }
 
   return (

@@ -92,6 +92,54 @@ export const productApi = createApi({
               },
             ],
     }),
+    // GET /products/export
+    exportProducts: builder.mutation<
+      Blob,
+      Omit<ProductQueryParams, "page" | "limit">
+    >({
+      query: ({
+        productName,
+        slug,
+        sku,
+        categoryId,
+        supplierId,
+        discontinued,
+        minPrice,
+        maxPrice,
+      }) => ({
+        url: "products/export",
+
+        params: {
+          ...(productName && { productName }),
+          ...(slug && { slug }),
+          ...(sku && { sku }),
+
+          ...(categoryId !== undefined && {
+            categoryId,
+          }),
+
+          ...(supplierId !== undefined && {
+            supplierId,
+          }),
+
+          ...(discontinued !== undefined && {
+            discontinued,
+          }),
+
+          ...(minPrice !== undefined && {
+            minPrice,
+          }),
+
+          ...(maxPrice !== undefined && {
+            maxPrice,
+          }),
+        },
+
+        responseHandler: async (response) => {
+          return response.blob();
+        },
+      }),
+    }),
 
     // =========================
     // GET /products/:id
@@ -176,6 +224,7 @@ export const productApi = createApi({
 
 export const {
   useGetProductsQuery,
+  useExportProductsMutation,
   useGetProductQuery,
   useCreateProductMutation,
   useUpdateProductMutation,
