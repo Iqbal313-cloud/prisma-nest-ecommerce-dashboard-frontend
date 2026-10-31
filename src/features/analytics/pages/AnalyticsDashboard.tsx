@@ -42,9 +42,7 @@ export default function AnalyticsDashboard() {
 
   if (isError || !data) {
     return (
-      <div className="space-y-3">
-        <ErrorMessage message="Unable to load analytics. Something went wrong while fetching dashboard data." />
-      </div>
+      <ErrorMessage message="Unable to load analytics. Something went wrong while fetching dashboard data." />
     );
   }
 

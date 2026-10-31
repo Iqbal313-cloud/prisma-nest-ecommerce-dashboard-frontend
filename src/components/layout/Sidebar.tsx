@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Boxes,
   ChevronDown,
@@ -19,7 +19,14 @@ import type { ComponentType } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSession } from "../../lib/auth-client";
 
-type UserRole = "admin" | "manager" | "sales";
+type UserRole =
+  | "superAdmin"
+  | "admin"
+  | "manager"
+  | "sales"
+  | "accountant"
+  | "inventoryManager"
+  | "viewer";
 
 type NavigationItem = {
   title: string;
@@ -44,7 +51,7 @@ const navigation: NavigationItem[] = [
   {
     title: "Administration",
     icon: ShieldCheck,
-    allowedRoles: ["admin"],
+    allowedRoles: ["superAdmin", "admin"],
     children: [
       {
         title: "User Management",
@@ -67,49 +74,82 @@ const navigation: NavigationItem[] = [
     title: "Analytics Dashboard",
     href: "/",
     icon: LayoutDashboard,
-    allowedRoles: ["admin", "manager", "sales"],
+    allowedRoles: ["superAdmin", "admin", "manager", "accountant", "viewer"],
   },
   {
     title: "Products",
     href: "/products",
     icon: Package,
-    allowedRoles: ["admin", "manager", "sales"],
+    allowedRoles: [
+      "superAdmin",
+      "admin",
+      "manager",
+      "sales",
+      "inventoryManager",
+      "viewer",
+    ],
   },
   {
     title: "Categories",
     href: "/categories",
     icon: FolderTree,
-    allowedRoles: ["admin"],
+    allowedRoles: [
+      "superAdmin",
+      "admin",
+      "manager",
+      "inventoryManager",
+      "viewer",
+    ],
   },
   {
     title: "Orders",
     href: "/orders",
     icon: ShoppingCart,
-    allowedRoles: ["admin", "manager", "sales"],
+    allowedRoles: [
+      "superAdmin",
+      "admin",
+      "manager",
+      "sales",
+      "accountant",
+      "viewer",
+    ],
   },
   {
     title: "Customers",
     href: "/customers",
     icon: Users,
-    allowedRoles: ["admin", "manager", "sales"],
+    allowedRoles: [
+      "superAdmin",
+      "admin",
+      "manager",
+      "sales",
+      "accountant",
+      "viewer",
+    ],
   },
   {
     title: "Employees",
     href: "/employees",
     icon: UserRoundCog,
-    allowedRoles: ["admin", "manager"],
+    allowedRoles: ["superAdmin", "admin", "manager", "viewer"],
   },
   {
     title: "Suppliers",
     href: "/suppliers",
     icon: Truck,
-    allowedRoles: ["admin", "manager"],
+    allowedRoles: [
+      "superAdmin",
+      "admin",
+      "manager",
+      "inventoryManager",
+      "viewer",
+    ],
   },
   {
     title: "Database Metrics",
     href: "/monitoring",
     icon: DatabaseCheck,
-    allowedRoles: ["admin", "manager"],
+    allowedRoles: ["superAdmin", "admin", "manager", "viewer"],
   },
 ];
 
@@ -117,20 +157,33 @@ export default function Sidebar() {
   const location = useLocation();
   const { data: session, isPending } = useSession();
 
-  // Administration is collapsed by default
   const [isAdministrationOpen, setIsAdministrationOpen] = useState(false);
 
   const userRole = session?.user?.role as UserRole | undefined;
-
-  const filteredNavigation = navigation.filter((item) =>
-    userRole ? item.allowedRoles.includes(userRole) : false,
-  );
 
   const isLinkActive = (href: string) => {
     return href === "/"
       ? location.pathname === "/"
       : location.pathname === href || location.pathname.startsWith(`${href}/`);
   };
+
+  // Automatically open Administration when a child route is active
+  const isAdministrationActive = navigation.some(
+    (item) =>
+      "children" in item &&
+      item.children?.some((child) => isLinkActive(child.href)),
+  );
+
+  useEffect(() => {
+    if (isAdministrationActive) {
+      setIsAdministrationOpen(true);
+    }
+  }, [isAdministrationActive]);
+
+  // Filter navigation items based on the logged-in user's role
+  const filteredNavigation = navigation.filter((item) =>
+    userRole ? item.allowedRoles.includes(userRole) : false,
+  );
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 bg-white lg:block">
@@ -145,7 +198,7 @@ export default function Sidebar() {
               const Icon = item.icon;
 
               // Administration parent with collapsible nested links
-              if (item.children) {
+              if ("children" in item) {
                 const isActive = item.children.some((child) =>
                   isLinkActive(child.href),
                 );

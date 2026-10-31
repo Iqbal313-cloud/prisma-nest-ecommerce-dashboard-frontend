@@ -1,3 +1,47 @@
+// import { createAccessControl } from "better-auth/plugins/access";
+// import { defaultStatements, adminAc } from "better-auth/plugins/admin/access";
+
+// const statement = {
+//   ...defaultStatements,
+//   product: ["create", "read", "update", "delete"],
+//   category: ["create", "read", "update", "delete"],
+//   order: ["create", "read", "update", "delete"],
+//   customer: ["create", "read", "update", "delete"],
+//   employee: ["create", "read", "update", "delete"],
+//   supplier: ["create", "read", "update", "delete"],
+//   monitoring: ["read"],
+// } as const;
+
+// export const ac = createAccessControl(statement);
+
+// export const admin = ac.newRole({
+//   ...adminAc.statements,
+//   product: ["create", "read", "update", "delete"],
+//   category: ["create", "read", "update", "delete"],
+//   order: ["create", "read", "update", "delete"],
+//   customer: ["create", "read", "update", "delete"],
+//   employee: ["create", "read", "update", "delete"],
+//   supplier: ["create", "read", "update", "delete"],
+//   monitoring: ["read"],
+// });
+
+// export const manager = ac.newRole({
+//   product: ["read"],
+//   category: ["read"],
+//   order: ["create", "read", "update"],
+//   customer: ["create", "read", "update"],
+//   employee: ["read"],
+//   supplier: ["read"],
+//   monitoring: ["read"],
+// });
+
+// export const sales = ac.newRole({
+//   product: ["read"],
+//   category: ["read"],
+//   order: ["create", "read", "update"],
+//   customer: ["create", "read", "update"],
+// });
+
 import { createAccessControl } from "better-auth/plugins/access";
 import { defaultStatements, adminAc } from "better-auth/plugins/admin/access";
 
@@ -9,11 +53,26 @@ const statement = {
   customer: ["create", "read", "update", "delete"],
   employee: ["create", "read", "update", "delete"],
   supplier: ["create", "read", "update", "delete"],
+  analytics: ["read"],
   monitoring: ["read"],
 } as const;
 
 export const ac = createAccessControl(statement);
 
+// Super Admin: Full access
+export const superAdmin = ac.newRole({
+  ...adminAc.statements,
+  product: ["create", "read", "update", "delete"],
+  category: ["create", "read", "update", "delete"],
+  order: ["create", "read", "update", "delete"],
+  customer: ["create", "read", "update", "delete"],
+  employee: ["create", "read", "update", "delete"],
+  supplier: ["create", "read", "update", "delete"],
+  analytics: ["read"],
+  monitoring: ["read"],
+});
+
+// Admin: Full access
 export const admin = ac.newRole({
   ...adminAc.statements,
   product: ["create", "read", "update", "delete"],
@@ -22,9 +81,11 @@ export const admin = ac.newRole({
   customer: ["create", "read", "update", "delete"],
   employee: ["create", "read", "update", "delete"],
   supplier: ["create", "read", "update", "delete"],
+  analytics: ["read"],
   monitoring: ["read"],
 });
 
+// Manager
 export const manager = ac.newRole({
   product: ["read"],
   category: ["read"],
@@ -32,12 +93,40 @@ export const manager = ac.newRole({
   customer: ["create", "read", "update"],
   employee: ["read"],
   supplier: ["read"],
+  analytics: ["read"],
   monitoring: ["read"],
 });
 
+// Sales
 export const sales = ac.newRole({
   product: ["read"],
   category: ["read"],
   order: ["create", "read", "update"],
   customer: ["create", "read", "update"],
+});
+
+// Accountant
+export const accountant = ac.newRole({
+  order: ["read"],
+  customer: ["read"],
+  analytics: ["read"],
+});
+
+// Inventory Manager
+export const inventoryManager = ac.newRole({
+  product: ["create", "read", "update"],
+  category: ["read"],
+  supplier: ["create", "read", "update"],
+});
+
+// Viewer: Read-only access
+export const viewer = ac.newRole({
+  product: ["read"],
+  category: ["read"],
+  order: ["read"],
+  customer: ["read"],
+  employee: ["read"],
+  supplier: ["read"],
+  analytics: ["read"],
+  monitoring: ["read"],
 });

@@ -1,7 +1,16 @@
 import { createAuthClient } from "better-auth/react";
 import { adminClient } from "better-auth/client/plugins";
 
-import { ac, admin, manager, sales } from "./permissions";
+import {
+  ac,
+  superAdmin,
+  admin,
+  manager,
+  sales,
+  accountant,
+  inventoryManager,
+  viewer,
+} from "./permissions";
 
 export const authClient = createAuthClient({
   baseURL: "http://localhost:3000",
@@ -10,9 +19,13 @@ export const authClient = createAuthClient({
     adminClient({
       ac,
       roles: {
+        superAdmin,
         admin,
         manager,
         sales,
+        accountant,
+        inventoryManager,
+        viewer,
       },
     }),
   ],

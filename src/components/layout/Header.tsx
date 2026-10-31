@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   LogOut,
   Package,
@@ -6,6 +6,9 @@ import {
   Settings,
   ChevronDown,
   LockKeyhole,
+  UserRound,
+  Mail,
+  Hash,
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { signOut, useSession } from "../../lib/auth-client";
@@ -15,8 +18,32 @@ export default function Header() {
   const { data: session } = useSession();
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const userRole = session?.user?.role || "User";
+  const user = session?.user;
+  const userRole = user?.role || "User";
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -49,7 +76,7 @@ export default function Header() {
         </Link>
 
         {/* User Profile Dropdown */}
-        <div className="relative flex items-center gap-3">
+        <div ref={menuRef} className="relative flex items-center gap-3">
           <div className="flex items-center gap-2 rounded-lg bg-slate-100 px-3 py-2">
             <ShieldCheck className="h-4 w-4 text-slate-600" />
 
@@ -62,6 +89,7 @@ export default function Header() {
             type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
             aria-expanded={isMenuOpen}
+            aria-haspopup="true"
             aria-label="Open profile menu"
             className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 transition hover:bg-slate-50"
           >
@@ -75,7 +103,37 @@ export default function Header() {
           </button>
 
           {isMenuOpen && (
-            <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+            <div className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              {/* User Information */}
+              <div className="border-b border-slate-100 px-4 py-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100">
+                    <UserRound className="h-5 w-5 text-slate-600" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {user?.name || "User"}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">
+                      {user?.email}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-xs text-slate-500">
+                  <div className="flex items-center gap-2">
+                    <Hash className="h-3.5 w-3.5" />
+                    <span className="truncate">ID: {user?.id}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="h-3.5 w-3.5" />
+                    <span className="capitalize">Role: {userRole}</span>
+                  </div>
+                </div>
+              </div>
+
               <Link
                 to="/settings/account"
                 onClick={() => setIsMenuOpen(false)}

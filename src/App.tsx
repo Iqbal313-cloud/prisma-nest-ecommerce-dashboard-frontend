@@ -1,4 +1,4 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import DashboardPage from "./features/dashboard/pages/DashboardPage";
 import ProductListPage from "./features/products/pages/ProductListPage";
@@ -45,7 +45,116 @@ import SessionsPage from "./components/admin/SessionsPage";
 import AccountSettingsPage from "./components/settings/AccountSettingsPage";
 import ChangePasswordPage from "./components/settings/ChangePasswordPage";
 
-function App() {
+type UserRole =
+  | "superAdmin"
+  | "admin"
+  | "manager"
+  | "sales"
+  | "accountant"
+  | "inventoryManager"
+  | "viewer";
+
+// Role groups
+const ALL_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "sales",
+  "accountant",
+  "inventoryManager",
+  "viewer",
+];
+
+const ADMIN_ROLES: UserRole[] = ["superAdmin", "admin"];
+
+const ANALYTICS_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "sales",
+  "accountant",
+  "inventoryManager",
+  "viewer",
+];
+
+const PRODUCT_READ_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "sales",
+  "inventoryManager",
+  "viewer",
+];
+
+const PRODUCT_WRITE_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "inventoryManager",
+];
+
+const ORDER_WRITE_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "sales",
+];
+
+const ORDER_READ_ROLES: UserRole[] = [
+  ...ORDER_WRITE_ROLES,
+  "accountant",
+  "viewer",
+];
+
+const CUSTOMER_WRITE_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "sales",
+];
+
+const CUSTOMER_READ_ROLES: UserRole[] = [
+  ...CUSTOMER_WRITE_ROLES,
+  "accountant",
+  "viewer",
+];
+
+const EMPLOYEE_READ_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "viewer",
+];
+
+const SUPPLIER_READ_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "inventoryManager",
+  "viewer",
+];
+
+const SUPPLIER_WRITE_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "inventoryManager",
+];
+
+const CATEGORY_READ_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "inventoryManager",
+  "viewer",
+];
+
+const MONITORING_READ_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "manager",
+  "viewer",
+];
+
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
@@ -59,22 +168,27 @@ function App() {
         {/* Authentication Required */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
-            <Route path="/settings/account" element={<AccountSettingsPage />} />
-            <Route path="/settings/password" element={<ChangePasswordPage />} />
-            {/* ================================= */}
-            {/* Analytics - All Authenticated Users */}
-            {/* ================================= */}
+            {/* Account Settings - All Authenticated Users */}
+            <Route element={<RoleRoute allowedRoles={ALL_ROLES} />}>
+              <Route
+                path="/settings/account"
+                element={<AccountSettingsPage />}
+              />
+              <Route
+                path="/settings/password"
+                element={<ChangePasswordPage />}
+              />
+            </Route>
 
-            <Route element={<RoleRoute allowedRoles={["admin"]} />}>
+            {/* Admin Management */}
+            <Route element={<RoleRoute allowedRoles={ADMIN_ROLES} />}>
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/roles" element={<RolesPage />} />
               <Route path="/admin/sessions" element={<SessionsPage />} />
             </Route>
-            <Route
-              element={
-                <RoleRoute allowedRoles={["admin", "manager", "sales"]} />
-              }
-            >
+
+            {/* Analytics */}
+            <Route element={<RoleRoute allowedRoles={ANALYTICS_ROLES} />}>
               <Route path="/" element={<AnalyticsDashboard />} />
               <Route path="/analytics" element={<AnalyticsDashboard />} />
               <Route path="/analytics/sales" element={<SalesAnalyticsPage />} />
@@ -92,69 +206,53 @@ function App() {
               />
             </Route>
 
-            {/* ================================= */}
-            {/* Products */}
-            {/* Admin: Full Access */}
-            {/* Manager/Sales: Read Only */}
-            {/* ================================= */}
-            <Route
-              element={
-                <RoleRoute allowedRoles={["admin", "manager", "sales"]} />
-              }
-            >
+            {/* Products - Read */}
+            <Route element={<RoleRoute allowedRoles={PRODUCT_READ_ROLES} />}>
               <Route path="/products" element={<ProductListPage />} />
               <Route path="/products/:id" element={<ProductDetailsPage />} />
             </Route>
 
-            <Route element={<RoleRoute allowedRoles={["admin"]} />}>
+            {/* Products - Create / Update */}
+            <Route element={<RoleRoute allowedRoles={PRODUCT_WRITE_ROLES} />}>
               <Route path="/products/new" element={<ProductCreatePage />} />
               <Route path="/products/:id/edit" element={<ProductEditPage />} />
             </Route>
 
-            {/* ================================= */}
-            {/* Orders */}
-            {/* All Roles: Create, Read, Update */}
-            {/* ================================= */}
-            <Route
-              element={
-                <RoleRoute allowedRoles={["admin", "manager", "sales"]} />
-              }
-            >
+            {/* Orders - Read */}
+            <Route element={<RoleRoute allowedRoles={ORDER_READ_ROLES} />}>
               <Route path="/orders" element={<OrderListPage />} />
-              <Route path="/orders/new" element={<OrderCreatePage />} />
               <Route path="/orders/:id" element={<OrderDetailsPage />} />
+            </Route>
+
+            {/* Orders - Create / Update */}
+            <Route element={<RoleRoute allowedRoles={ORDER_WRITE_ROLES} />}>
+              <Route path="/orders/new" element={<OrderCreatePage />} />
               <Route path="/orders/:id/edit" element={<OrderEditPage />} />
             </Route>
 
-            {/* ================================= */}
-            {/* Customers */}
-            {/* All Roles: Create, Read, Update */}
-            {/* ================================= */}
-            <Route
-              element={
-                <RoleRoute allowedRoles={["admin", "manager", "sales"]} />
-              }
-            >
+            {/* Customers - Read */}
+            <Route element={<RoleRoute allowedRoles={CUSTOMER_READ_ROLES} />}>
               <Route path="/customers" element={<CustomerListPage />} />
-              <Route path="/customers/new" element={<CustomerCreatePage />} />
               <Route path="/customers/:id" element={<CustomerDetailsPage />} />
+            </Route>
+
+            {/* Customers - Create / Update */}
+            <Route element={<RoleRoute allowedRoles={CUSTOMER_WRITE_ROLES} />}>
+              <Route path="/customers/new" element={<CustomerCreatePage />} />
               <Route
                 path="/customers/:id/edit"
                 element={<CustomerEditPage />}
               />
             </Route>
 
-            {/* ================================= */}
-            {/* Employees */}
-            {/* Admin: Full Access */}
-            {/* Manager: Read Only */}
-            {/* ================================= */}
-            <Route element={<RoleRoute allowedRoles={["admin", "manager"]} />}>
+            {/* Employees - Read */}
+            <Route element={<RoleRoute allowedRoles={EMPLOYEE_READ_ROLES} />}>
               <Route path="/employees" element={<EmployeeListPage />} />
               <Route path="/employees/:id" element={<EmployeeDetailsPage />} />
             </Route>
 
-            <Route element={<RoleRoute allowedRoles={["admin"]} />}>
+            {/* Employees - Create / Update */}
+            <Route element={<RoleRoute allowedRoles={ADMIN_ROLES} />}>
               <Route path="/employees/new" element={<EmployeeCreatePage />} />
               <Route
                 path="/employees/:id/edit"
@@ -162,17 +260,14 @@ function App() {
               />
             </Route>
 
-            {/* ================================= */}
-            {/* Suppliers */}
-            {/* Admin: Full Access */}
-            {/* Manager: Read Only */}
-            {/* ================================= */}
-            <Route element={<RoleRoute allowedRoles={["admin", "manager"]} />}>
+            {/* Suppliers - Read */}
+            <Route element={<RoleRoute allowedRoles={SUPPLIER_READ_ROLES} />}>
               <Route path="/suppliers" element={<SupplierListPage />} />
               <Route path="/suppliers/:id" element={<SupplierDetailsPage />} />
             </Route>
 
-            <Route element={<RoleRoute allowedRoles={["admin"]} />}>
+            {/* Suppliers - Create / Update */}
+            <Route element={<RoleRoute allowedRoles={SUPPLIER_WRITE_ROLES} />}>
               <Route path="/suppliers/new" element={<SupplierCreatePage />} />
               <Route
                 path="/suppliers/:id/edit"
@@ -180,25 +275,23 @@ function App() {
               />
             </Route>
 
-            {/* ================================= */}
-            {/* Categories */}
-            {/* Admin Only */}
-            {/* ================================= */}
-            <Route element={<RoleRoute allowedRoles={["admin"]} />}>
+            {/* Categories - Read */}
+            <Route element={<RoleRoute allowedRoles={CATEGORY_READ_ROLES} />}>
               <Route path="/categories" element={<CategoryListPage />} />
-              <Route path="/categories/new" element={<CategoryCreatePage />} />
               <Route path="/categories/:id" element={<CategoryDetailsPage />} />
+            </Route>
+
+            {/* Categories - Create / Update */}
+            <Route element={<RoleRoute allowedRoles={ADMIN_ROLES} />}>
+              <Route path="/categories/new" element={<CategoryCreatePage />} />
               <Route
                 path="/categories/:id/edit"
                 element={<CategoryEditPage />}
               />
             </Route>
 
-            {/* ================================= */}
-            {/* Database Monitoring */}
-            {/* Admin / Manager: Read Only */}
-            {/* ================================= */}
-            <Route element={<RoleRoute allowedRoles={["admin", "manager"]} />}>
+            {/* Database Monitoring - Read */}
+            <Route element={<RoleRoute allowedRoles={MONITORING_READ_ROLES} />}>
               <Route path="/monitoring" element={<MonitoringPage />} />
               <Route
                 path="/monitoring/recent-queries"
@@ -219,5 +312,3 @@ function App() {
     </BrowserRouter>
   );
 }
-
-export default App;
