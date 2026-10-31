@@ -8,6 +8,8 @@ import {
 
 import SupplierForm from "../components/SupplierForm";
 import type { CreateSupplierPayload } from "../types/supplier.types";
+import Loading from "@/components/common/Loading";
+import ErrorMessage from "@/components/common/ErrorMessage";
 
 function SupplierEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -54,16 +56,12 @@ function SupplierEditPage() {
   }
 
   if (isLoading) {
-    return <p className="p-6 text-sm text-slate-500">Loading supplier...</p>;
+    return <Loading message="Loading Suppliers..." minHeight="min-h-[300px]" />;
   }
 
-  if (isError || !supplier) {
-    return (
-      <p role="alert" className="p-6 text-sm text-red-600">
-        Failed to load supplier details.
-      </p>
-    );
-  }
+if (isError || !supplier) {
+  return <ErrorMessage message="Failed to load supplier details." />;
+}
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">

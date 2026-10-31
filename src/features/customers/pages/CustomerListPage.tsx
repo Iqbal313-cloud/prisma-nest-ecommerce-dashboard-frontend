@@ -5,6 +5,8 @@ import Pagination from "@/components/common/Pagination";
 import CustomerFilters from "../components/CustomerFilters";
 import CustomerTable from "../components/CustomerTable";
 import type { CustomerFilters as CustomerFilterValues } from "../types/customer.types";
+import ErrorMessage from "@/components/common/ErrorMessage";
+import Loading from "@/components/common/Loading";
 
 export default function CustomerListPage() {
   const [filters, setFilters] = useState<CustomerFilterValues>({});
@@ -31,6 +33,14 @@ export default function CustomerListPage() {
     setPage(1);
   }
 
+  if (isLoading) {
+    return <Loading message="Loading customers..." />;
+  }
+
+  if (isError) {
+    return <ErrorMessage message="Failed to load customers." />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -45,7 +55,7 @@ export default function CustomerListPage() {
           to="/customers/new"
           className="inline-flex items-center justify-center rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-orange-600"
         >
-          + Add Customer
+          Add Customer
         </Link>
       </div>
 
@@ -55,36 +65,17 @@ export default function CustomerListPage() {
         onReset={() => setFilters({})}
       />
 
-      {isError ? (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-          <p className="text-sm text-red-700">Failed to load customers.</p>
-          <button
-            type="button"
-            onClick={() => refetch()}
-            className="mt-3 rounded-lg border border-red-200 px-3 py-2 text-sm text-red-700 hover:bg-red-100"
-          >
-            Try again
-          </button>
-        </div>
-      ) : isLoading ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
-          Loading customers...
-        </div>
-      ) : (
-        <>
-          <CustomerTable customers={customers} />
+      <CustomerTable customers={customers} />
 
-          <Pagination
-            page={page}
-            lastPage={lastPage}
-            total={total}
-            limit={limit}
-            onPageChange={setPage}
-            onLimitChange={handleLimitChange}
-            isFetching={isFetching}
-          />
-        </>
-      )}
+      <Pagination
+        page={page}
+        lastPage={lastPage}
+        total={total}
+        limit={limit}
+        onPageChange={setPage}
+        onLimitChange={handleLimitChange}
+        isFetching={isFetching}
+      />
     </div>
   );
 }

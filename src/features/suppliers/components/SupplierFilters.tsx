@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { SupplierQueryParams } from "../types/supplier.types";
-import {  RotateCcw } from "lucide-react";
+import {  RotateCcw, SlidersHorizontal } from "lucide-react";
 
 interface SupplierFiltersProps {
   filters: SupplierQueryParams;
@@ -83,7 +83,10 @@ function SupplierFilters({ filters, onChange, onReset }: SupplierFiltersProps) {
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-semibold text-slate-800">Filters</h2>
+        <h2 className="inline-flex items-center gap-2 text-sm font-medium text-orange-600 hover:text-orange-700">
+          <SlidersHorizontal size={18} className="text-slate-500" />
+          Filters
+        </h2>
 
         <button
           type="button"

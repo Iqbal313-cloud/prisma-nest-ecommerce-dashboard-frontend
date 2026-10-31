@@ -1,6 +1,8 @@
 import { Link, useParams } from "react-router-dom";
 
 import { useGetSupplierQuery } from "@/api/supplierApi";
+import Loading from "@/components/common/Loading";
+import ErrorMessage from "@/components/common/ErrorMessage";
 
 function SupplierDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,16 +26,12 @@ function SupplierDetailsPage() {
   }
 
   if (isLoading) {
-    return <p className="p-6 text-sm text-slate-500">Loading supplier...</p>;
+    return <Loading message="Loading suppliers..." minHeight="min-h-[300px]" />;
   }
 
-  if (isError || !supplier) {
-    return (
-      <p role="alert" className="p-6 text-sm text-red-600">
-        Failed to load supplier details.
-      </p>
-    );
-  }
+if (isError || !supplier) {
+  return <ErrorMessage message="Failed to load supplier details." />;
+}
 
   const details = [
     ["Supplier Name", supplier.supplierName],

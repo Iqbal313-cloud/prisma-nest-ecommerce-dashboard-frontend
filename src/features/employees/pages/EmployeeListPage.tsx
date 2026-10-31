@@ -7,6 +7,8 @@ import Pagination from "@/components/common/Pagination";
 import EmployeeFilters from "../components/EmployeeFilters";
 import EmployeeTable from "../components/EmployeeTable";
 import type { EmployeeQueryParams } from "../types/employee.types";
+import ErrorMessage from "@/components/common/ErrorMessage";
+import Loading from "@/components/common/Loading";
 
 function EmployeeListPage() {
   const [filters, setFilters] = useState<EmployeeQueryParams>({
@@ -48,17 +50,11 @@ function EmployeeListPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="p-6 text-sm text-slate-500">Loading employees...</div>
-    );
+    return <Loading message="Loading employees..." minHeight="min-h-[300px]" />;
   }
 
   if (isError) {
-    return (
-      <div className="p-6 text-sm text-red-600">
-        Failed to load employees. Please try again.
-      </div>
-    );
+    return <ErrorMessage message="Failed to load employees." />;
   }
 
   return (
@@ -95,7 +91,6 @@ function EmployeeListPage() {
             Updating employees...
           </div>
         )}
-
         {data && <EmployeeTable employees={data.data} />}
 
         {data && (

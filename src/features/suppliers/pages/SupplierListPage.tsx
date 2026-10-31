@@ -8,6 +8,8 @@ import useDebounce from "@/hooks/useDebounce";
 import SupplierFilters from "../components/SupplierFilters";
 import SupplierTable from "../components/SupplierTable";
 import type { SupplierQueryParams } from "../types/supplier.types";
+import ErrorMessage from "@/components/common/ErrorMessage";
+import Loading from "@/components/common/Loading";
 
 function SupplierListPage() {
   const [filters, setFilters] = useState<SupplierQueryParams>({
@@ -59,18 +61,13 @@ function SupplierListPage() {
     }));
   };
 
-  if (isLoading) {
-    return (
-      <div className="p-6 text-sm text-slate-500">Loading suppliers...</div>
-    );
-  }
+ if (isLoading) {
+   return <Loading message="Loading Suppliers..." minHeight="min-h-[300px]" />;
+ }
 
   if (isError || !data) {
-    return (
-      <div role="alert" className="p-6 text-sm text-red-600">
-        Failed to load suppliers. Please try again.
-      </div>
-    );
+    return <ErrorMessage message="Failed to load Suppliers." />;
+
   }
 
   return (

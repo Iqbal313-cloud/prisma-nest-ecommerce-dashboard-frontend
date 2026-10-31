@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useGetCategoriesQuery } from "@/api/categoryApi";
 import CategoryTree from "../components/CategoryTree";
 import type { Category } from "../types/category.types";
+import ErrorMessage from "@/components/common/ErrorMessage";
 
 function countCategories(categories: Category[]): number {
   return categories.reduce(
@@ -28,16 +29,7 @@ function CategoryListPage() {
 
   if (isError || !categories) {
     return (
-      <div className="rounded-xl border border-red-100 bg-red-50 p-6">
-        <p className="text-sm text-red-700">Failed to load categories.</p>
-        <button
-          type="button"
-          onClick={() => void refetch()}
-          className="mt-3 text-sm font-semibold text-red-700 underline"
-        >
-          Try again
-        </button>
-      </div>
+      <ErrorMessage message="Failed to load Categories. Please try again later." />
     );
   }
 

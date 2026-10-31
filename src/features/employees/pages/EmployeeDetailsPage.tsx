@@ -1,5 +1,7 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useGetEmployeeByIdQuery } from "@/api/employeeApi";
+import ErrorMessage from "@/components/common/ErrorMessage";
+import Loading from "@/components/common/Loading";
 
 function formatDate(value?: string | null) {
   if (!value) return "-";
@@ -52,19 +54,20 @@ export default function EmployeeDetailsPage() {
   }
 
   if (isLoading) {
-    return <p className="p-6 text-sm text-slate-500">Loading employee...</p>;
+    return <Loading message="Loading employee..." minHeight="min-h-[300px]" />;
   }
 
   if (isError || !response?.data) {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-red-600">Could not load this employee.</p>
+        <ErrorMessage message="Could not load this employee." />
+
         <button
           type="button"
           onClick={() => refetch()}
-          className="rounded-lg border px-4 py-2 text-sm"
+          className="inline-flex items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
         >
-          Try again
+          Retry
         </button>
       </div>
     );
