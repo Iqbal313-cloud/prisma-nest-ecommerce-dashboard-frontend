@@ -1,50 +1,79 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+
+// Authentication
+import LoginPage from "./components/auth/LoginPage";
+import RegisterPage from "./components/auth/RegisterPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
+import RoleRoute from "./components/auth/RoleRoute";
+import UnauthorizedPage from "./components/auth/UnauthorizedPage";
+
+// Layout
 import Layout from "./components/layout/Layout";
-import DashboardPage from "./features/dashboard/pages/DashboardPage";
-import ProductListPage from "./features/products/pages/ProductListPage";
-import ProductCreatePage from "./features/products/pages/ProductCreatePage";
-import ProductDetailsPage from "./features/products/pages/ProductDetailsPage";
-import ProductEditPage from "./features/products/pages/ProductEditPage";
-import OrderListPage from "./features/orders/pages/OrderListPage";
-import OrderCreatePage from "./features/orders/pages/OrderCreatePage";
-import OrderEditPage from "./features/orders/pages/OrderEditPage";
-import OrderDetailsPage from "./features/orders/pages/OrderDetailsPage";
-import CustomerListPage from "./features/customers/pages/CustomerListPage";
-import CustomerCreatePage from "./features/customers/pages/CustomerCreatePage";
-import CustomerDetailsPage from "./features/customers/pages/CustomerDetailsPage";
-import CustomerEditPage from "./features/customers/pages/CustomerEditPage";
-import EmployeeListPage from "./features/employees/pages/EmployeeListPage";
-import EmployeeCreatePage from "./features/employees/pages/EmployeeCreatePage";
-import EmployeeDetailsPage from "./features/employees/pages/EmployeeDetailsPage";
-import EmployeeEditPage from "./features/employees/pages/EmployeeEditPage";
-import SupplierListPage from "./features/suppliers/pages/SupplierListPage";
-import SupplierCreatePage from "./features/suppliers/pages/SupplierCreatePage";
-import SupplierDetailsPage from "./features/suppliers/pages/SupplierDetailsPage";
-import SupplierEditPage from "./features/suppliers/pages/SupplierEditPage";
-import CategoryListPage from "./features/categories/pages/CategoryListPage";
-import CategoryCreatePage from "./features/categories/pages/CategoryCreatePage";
-import CategoryDetailsPage from "./features/categories/pages/CategoryDetailsPage";
-import CategoryEditPage from "./features/categories/pages/CategoryEditPage";
+
+// Dashboard
+import DashboardHomePage from "./features/dashboard/pages/DashboardPage";
+
+// Admin
+import UsersPage from "./components/admin/UsersPage";
+import RolesPage from "./components/admin/RolesPage";
+import SessionsPage from "./components/admin/SessionsPage";
+
+// Settings
+import AccountSettingsPage from "./components/settings/AccountSettingsPage";
+import ChangePasswordPage from "./components/settings/ChangePasswordPage";
+
+// Analytics
+import AnalyticsDashboard from "./features/analytics/pages/AnalyticsDashboard";
 import SalesAnalyticsPage from "./features/analytics/pages/SalesAnalyticsPage";
 import OrderAnalyticsPage from "./features/analytics/pages/OrderAnalyticsPage";
 import InventoryAnalyticsPage from "./features/analytics/pages/InventoryAnalyticsPage";
 import CustomerAnalyticsPage from "./features/analytics/pages/CustomerAnalyticsPage";
-import AnalyticsDashboard from "./features/analytics/pages/AnalyticsDashboard";
+
+// Products
+import ProductListPage from "./features/products/pages/ProductListPage";
+import ProductCreatePage from "./features/products/pages/ProductCreatePage";
+import ProductDetailsPage from "./features/products/pages/ProductDetailsPage";
+import ProductEditPage from "./features/products/pages/ProductEditPage";
+
+// Categories
+import CategoryListPage from "./features/categories/pages/CategoryListPage";
+import CategoryCreatePage from "./features/categories/pages/CategoryCreatePage";
+import CategoryDetailsPage from "./features/categories/pages/CategoryDetailsPage";
+import CategoryEditPage from "./features/categories/pages/CategoryEditPage";
+
+// Orders
+import OrderListPage from "./features/orders/pages/OrderListPage";
+import OrderCreatePage from "./features/orders/pages/OrderCreatePage";
+import OrderDetailsPage from "./features/orders/pages/OrderDetailsPage";
+import OrderEditPage from "./features/orders/pages/OrderEditPage";
+
+// Customers
+import CustomerListPage from "./features/customers/pages/CustomerListPage";
+import CustomerCreatePage from "./features/customers/pages/CustomerCreatePage";
+import CustomerDetailsPage from "./features/customers/pages/CustomerDetailsPage";
+import CustomerEditPage from "./features/customers/pages/CustomerEditPage";
+
+// Employees
+import EmployeeListPage from "./features/employees/pages/EmployeeListPage";
+import EmployeeCreatePage from "./features/employees/pages/EmployeeCreatePage";
+import EmployeeDetailsPage from "./features/employees/pages/EmployeeDetailsPage";
+import EmployeeEditPage from "./features/employees/pages/EmployeeEditPage";
+
+// Suppliers
+import SupplierListPage from "./features/suppliers/pages/SupplierListPage";
+import SupplierCreatePage from "./features/suppliers/pages/SupplierCreatePage";
+import SupplierDetailsPage from "./features/suppliers/pages/SupplierDetailsPage";
+import SupplierEditPage from "./features/suppliers/pages/SupplierEditPage";
+
+// Monitoring
 import MonitoringPage from "./features/monitoring/types/pages/MonitoringPage";
 import RecentQueriesPage from "./features/monitoring/types/pages/RecentQueriesPage";
 import SlowQueriesPage from "./features/monitoring/types/pages/SlowQueriesPage";
 import TopQueriesPage from "./features/monitoring/types/pages/TopQueriesPage";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import LoginPage from "./components/auth/LoginPage";
-import RegisterPage from "./components/auth/RegisterPage";
-import RoleRoute from "./components/auth/RoleRoute";
-import UnauthorizedPage from "./components/auth/UnauthorizedPage";
-import UsersPage from "./components/admin/UsersPage";
-import RolesPage from "./components/admin/RolesPage";
-import SessionsPage from "./components/admin/SessionsPage";
-import AccountSettingsPage from "./components/settings/AccountSettingsPage";
-import ChangePasswordPage from "./components/settings/ChangePasswordPage";
+import ForgotPasswordPage from "./components/auth/ForgotPasswordPage";
+import ResetPasswordPage from "./components/auth/ResetPasswordPage";
 
+// User Roles
 type UserRole =
   | "superAdmin"
   | "admin"
@@ -54,7 +83,7 @@ type UserRole =
   | "inventoryManager"
   | "viewer";
 
-// Role groups
+// Role Groups
 const ALL_ROLES: UserRole[] = [
   "superAdmin",
   "admin",
@@ -71,9 +100,7 @@ const ANALYTICS_ROLES: UserRole[] = [
   "superAdmin",
   "admin",
   "manager",
-  "sales",
   "accountant",
-  "inventoryManager",
   "viewer",
 ];
 
@@ -147,6 +174,12 @@ const CATEGORY_READ_ROLES: UserRole[] = [
   "viewer",
 ];
 
+const CATEGORY_WRITE_ROLES: UserRole[] = [
+  "superAdmin",
+  "admin",
+  "inventoryManager",
+];
+
 const MONITORING_READ_ROLES: UserRole[] = [
   "superAdmin",
   "admin",
@@ -161,6 +194,9 @@ export default function App() {
         {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Unauthorized */}
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
@@ -168,6 +204,9 @@ export default function App() {
         {/* Authentication Required */}
         <Route element={<ProtectedRoute />}>
           <Route element={<Layout />}>
+            {/* Default Home - All Authenticated Users */}
+            <Route path="/" element={<DashboardHomePage />} />
+
             {/* Account Settings - All Authenticated Users */}
             <Route element={<RoleRoute allowedRoles={ALL_ROLES} />}>
               <Route
@@ -187,9 +226,8 @@ export default function App() {
               <Route path="/admin/sessions" element={<SessionsPage />} />
             </Route>
 
-            {/* Analytics */}
+            {/* Analytics - Read Permission */}
             <Route element={<RoleRoute allowedRoles={ANALYTICS_ROLES} />}>
-              <Route path="/" element={<AnalyticsDashboard />} />
               <Route path="/analytics" element={<AnalyticsDashboard />} />
               <Route path="/analytics/sales" element={<SalesAnalyticsPage />} />
               <Route
@@ -282,7 +320,7 @@ export default function App() {
             </Route>
 
             {/* Categories - Create / Update */}
-            <Route element={<RoleRoute allowedRoles={ADMIN_ROLES} />}>
+            <Route element={<RoleRoute allowedRoles={CATEGORY_WRITE_ROLES} />}>
               <Route path="/categories/new" element={<CategoryCreatePage />} />
               <Route
                 path="/categories/:id/edit"
@@ -308,6 +346,9 @@ export default function App() {
             </Route>
           </Route>
         </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

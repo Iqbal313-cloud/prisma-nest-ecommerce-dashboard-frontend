@@ -62,6 +62,13 @@ export default function RoleRoute({ allowedRoles }: RoleRouteProps) {
 
   const userRole = session.user.role;
 
+  console.log("RoleRoute Debug:", {
+    user: session.user,
+    userRole,
+    allowedRoles,
+    isPending,
+  });
+
   if (!userRole || !allowedRoles.includes(userRole as UserRole)) {
     return <Navigate to="/unauthorized" replace />;
   }

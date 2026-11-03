@@ -1,34 +1,65 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+
 import {
   Activity,
   AlertCircle,
-  ArrowRightLeft,
+  ArrowLeft,
+  Ban,
   CheckCircle2,
-  Clock3,
-  Globe2,
+  Clock,
   Laptop,
-  LoaderCircle,
+  Loader2,
   LogOut,
+  Monitor,
   RefreshCw,
-  ShieldCheck,
-  ShieldAlert,
+  Search,
+  Shield,
   Smartphone,
   UserRound,
   Users,
   XCircle,
 } from "lucide-react";
+
 import { authClient, useSession } from "../../lib/auth-client";
+
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "../common/Table";
+
+import Pagination from "../common/Pagination";
+import useDebounce from "@/hooks/useDebounce";
+
+// -----------------------------------------------------------------------------
+// Constants
+// -----------------------------------------------------------------------------
+
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 10;
+const FETCH_LIMIT = 100;
+
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
 
 interface AdminUser {
   id: string;
   name: string;
   email: string;
   role?: string;
+  image?: string | null;
+  emailVerified?: boolean;
+  banned?: boolean;
+  createdAt?: string;
 }
 
 interface UserSession {
   id: string;
-  token: string;
+  token?: string;
   userId: string;
   createdAt: string;
   updatedAt: string;
@@ -38,653 +69,1040 @@ interface UserSession {
   impersonatedBy?: string | null;
 }
 
-type SessionListResponse = UserSession[] | { sessions?: UserSession[] } | null;
+interface UserListResponse {
+  users: AdminUser[];
+  total: number;
+}
+
+type SessionListResponse =
+  | UserSession[]
+  | {
+      sessions?: UserSession[];
+    }
+  | null;
+
+type Message = {
+  type: "success" | "error";
+  text: string;
+};
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
+const formatDate = (date?: string) => {
+  if (!date) return "—";
+
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) return "—";
+
+  return parsedDate.toLocaleString();
+};
+
+const getDeviceName = (userAgent?: string | null) => {
+  if (!userAgent) return "Unknown device";
+
+  if (/iPhone/i.test(userAgent)) return "iPhone";
+  if (/iPad/i.test(userAgent)) return "iPad";
+  if (/Android/i.test(userAgent)) return "Android device";
+  if (/Windows/i.test(userAgent)) return "Windows";
+  if (/Macintosh|Mac OS/i.test(userAgent)) return "Mac";
+  if (/Linux/i.test(userAgent)) return "Linux";
+
+  return "Unknown device";
+};
+
+const getRoleStyle = (role?: string) => {
+  const styles: Record<string, string> = {
+    superAdmin: "bg-violet-100 text-violet-800 ring-violet-300",
+    admin: "bg-rose-100 text-rose-800 ring-rose-300",
+    manager: "bg-sky-100 text-sky-800 ring-sky-300",
+    inventoryManager: "bg-indigo-100 text-indigo-800 ring-indigo-300",
+    accountant: "bg-emerald-100 text-emerald-800 ring-emerald-300",
+    sales: "bg-amber-100 text-amber-800 ring-amber-300",
+    viewer: "bg-slate-100 text-slate-700 ring-slate-300",
+  };
+
+  return styles[role || ""] || "bg-gray-100 text-gray-700 ring-gray-300";
+};
+
+const getBrowserName = (userAgent?: string | null) => {
+  if (!userAgent) return "Unknown browser";
+
+  if (/Edg/i.test(userAgent)) return "Microsoft Edge";
+  if (/OPR|Opera/i.test(userAgent)) return "Opera";
+  if (/Chrome/i.test(userAgent)) return "Google Chrome";
+  if (/Firefox/i.test(userAgent)) return "Mozilla Firefox";
+  if (/Safari/i.test(userAgent)) return "Safari";
+
+  return "Unknown browser";
+};
+
+const getDeviceIcon = (userAgent?: string | null) => {
+  if (!userAgent) return Monitor;
+
+  if (/Mobile|Android|iPhone/i.test(userAgent)) {
+    return Smartphone;
+  }
+
+  return Laptop;
+};
+
+const getErrorMessage = (error: unknown) => {
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof error.message === "string"
+  ) {
+    return error.message;
+  }
+
+  return "Something went wrong. Please try again.";
+};
+
+// -----------------------------------------------------------------------------
+// Component
+// -----------------------------------------------------------------------------
 
 export default function SessionsPage() {
-  const { data: currentSession, isPending: sessionPending } = useSession();
+  const { data: currentSession, isPending: isSessionPending } = useSession();
+
+  const currentUserId = currentSession?.user?.id;
+  const currentUserRole = currentSession?.user?.role;
+
+  // ---------------------------------------------------------------------------
+  // Users state
+  // ---------------------------------------------------------------------------
 
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [sessions, setSessions] = useState<UserSession[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
+
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
+
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounce(search, 400).trim();
+
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // ---------------------------------------------------------------------------
+  // Selected user / sessions state
+  // ---------------------------------------------------------------------------
+
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+
   const [loadingSessions, setLoadingSessions] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [sessionActionLoading, setSessionActionLoading] = useState(false);
 
-  const isImpersonating = Boolean(currentSession?.session?.impersonatedBy);
-  const currentUserId = currentSession?.user?.id;
-  const selectedUser = users.find((user) => user.id === selectedUserId);
-  const isManagingOwnSessions = selectedUserId === currentUserId;
+  const [message, setMessage] = useState<Message | null>(null);
 
-  const activeSessions = useMemo(
-    () =>
-      sessions.filter(
-        (session) => new Date(session.expiresAt).getTime() > Date.now(),
-      ),
-    [sessions],
-  );
+  // ---------------------------------------------------------------------------
+  // Client-side filtering
+  // ---------------------------------------------------------------------------
 
-  const expiredSessions = sessions.length - activeSessions.length;
+  const filteredUsers = useMemo(() => {
+    const normalizedSearch = debouncedSearch.toLowerCase();
 
-  const formatDate = (value: string) => {
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return "Unknown";
-    return new Intl.DateTimeFormat(undefined, {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(date);
-  };
+    if (!normalizedSearch) return users;
 
-  const getDeviceName = (userAgent?: string | null) => {
-    if (!userAgent) return "Unknown device";
-    if (/iPhone|iPad|Android|Mobile/i.test(userAgent)) return "Mobile device";
-    if (/Windows/i.test(userAgent)) return "Windows device";
-    if (/Macintosh|Mac OS/i.test(userAgent)) return "Mac device";
-    if (/Linux/i.test(userAgent)) return "Linux device";
-    return "Desktop / browser";
-  };
+    return users.filter((user) =>
+      user.name?.toLowerCase().includes(normalizedSearch),
+    );
+  }, [users, debouncedSearch]);
 
-  const getBrowserName = (userAgent?: string | null) => {
-    if (!userAgent) return "Browser information unavailable";
-    if (/Edg\//i.test(userAgent)) return "Microsoft Edge";
-    if (/OPR\//i.test(userAgent)) return "Opera";
-    if (/Chrome\//i.test(userAgent) && !/Edg\//i.test(userAgent))
-      return "Google Chrome";
-    if (/Firefox\//i.test(userAgent)) return "Mozilla Firefox";
-    if (/Safari\//i.test(userAgent) && !/Chrome\//i.test(userAgent))
-      return "Safari";
-    return "Browser";
-  };
+  // ---------------------------------------------------------------------------
+  // Client-side pagination
+  // ---------------------------------------------------------------------------
 
-  // Load the user list available to the admin.
-  useEffect(() => {
-    let cancelled = false;
+  const totalUsers = filteredUsers.length;
 
-    async function loadUsers() {
-      setLoadingUsers(true);
-      setError("");
+  const lastPage = Math.max(1, Math.ceil(totalUsers / limit));
 
-      try {
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (page - 1) * limit;
+
+    return filteredUsers.slice(startIndex, startIndex + limit);
+  }, [filteredUsers, page, limit]);
+
+  // ---------------------------------------------------------------------------
+  // Selected user derived values
+  // ---------------------------------------------------------------------------
+
+  const selectedUserId = selectedUser?.id;
+
+  const isManagingOwnSessions =
+    Boolean(selectedUserId) && selectedUserId === currentUserId;
+
+  const canImpersonateSelectedUser = useMemo(() => {
+    if (!selectedUser || !currentUserRole) {
+      return false;
+    }
+
+    if (selectedUser.id === currentUserId || selectedUser.banned) {
+      return false;
+    }
+
+    if (currentUserRole === "superAdmin") {
+      return selectedUser.role !== "superAdmin";
+    }
+
+    if (currentUserRole === "admin") {
+      return (
+        selectedUser.role !== "admin" && selectedUser.role !== "superAdmin"
+      );
+    }
+
+    return false;
+  }, [selectedUser, currentUserRole, currentUserId]);
+
+  const activeSessions = useMemo(() => {
+    const now = Date.now();
+
+    return sessions.filter(
+      (session) => new Date(session.expiresAt).getTime() > now,
+    );
+  }, [sessions]);
+
+  const expiredSessions = useMemo(() => {
+    const now = Date.now();
+
+    return sessions.filter(
+      (session) => new Date(session.expiresAt).getTime() <= now,
+    );
+  }, [sessions]);
+
+  // ---------------------------------------------------------------------------
+  // Fetch ALL users
+  // ---------------------------------------------------------------------------
+
+  const fetchUsers = useCallback(async () => {
+    setLoadingUsers(true);
+
+    try {
+      let allUsers: AdminUser[] = [];
+      let total = 0;
+      let offset = 0;
+
+      const firstResult = await authClient.admin.listUsers({
+        query: {
+          limit: FETCH_LIMIT,
+          offset,
+          sortBy: "name",
+          sortDirection: "asc",
+        },
+      });
+
+      if (firstResult.error) {
+        throw firstResult.error;
+      }
+
+      const firstResponse = firstResult.data as unknown as UserListResponse;
+
+      total = firstResponse?.total ?? 0;
+      allUsers = firstResponse?.users ?? [];
+
+      offset += FETCH_LIMIT;
+
+      while (allUsers.length < total) {
         const result = await authClient.admin.listUsers({
           query: {
-            limit: 100,
+            limit: FETCH_LIMIT,
+            offset,
             sortBy: "name",
             sortDirection: "asc",
           },
         });
 
-        if (result.error) throw new Error(result.error.message);
+        if (result.error) {
+          throw result.error;
+        }
 
-        if (!cancelled) {
-          const list = (result.data?.users ?? []) as AdminUser[];
-          setUsers(list);
-          setSelectedUserId((current) => {
-            if (current && list.some((user) => user.id === current))
-              return current;
-            return list[0]?.id ?? "";
-          });
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(
-            err instanceof Error ? err.message : "Failed to load users.",
-          );
-        }
-      } finally {
-        if (!cancelled) setLoadingUsers(false);
+        const response = result.data as unknown as UserListResponse;
+        const nextUsers = response?.users ?? [];
+
+        if (nextUsers.length === 0) break;
+
+        allUsers = [...allUsers, ...nextUsers];
+        offset += FETCH_LIMIT;
       }
-    }
 
-    void loadUsers();
-    return () => {
-      cancelled = true;
-    };
+      setUsers(allUsers);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: getErrorMessage(error),
+      });
+
+      setUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
   }, []);
 
-  // Load sessions for the selected user.
-  const fetchSessions = useCallback(async (userId: string) => {
-    if (!userId) {
-      setSessions([]);
-      return;
-    }
+  useEffect(() => {
+    void fetchUsers();
+  }, [fetchUsers]);
 
+  // ---------------------------------------------------------------------------
+  // Search / pagination handlers
+  // ---------------------------------------------------------------------------
+
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(DEFAULT_PAGE);
+    setSelectedUser(null);
+    setSessions([]);
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage);
+    setSelectedUser(null);
+    setSessions([]);
+  };
+
+  const handleLimitChange = (nextLimit: number) => {
+    setLimit(nextLimit);
+    setPage(DEFAULT_PAGE);
+    setSelectedUser(null);
+    setSessions([]);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Fetch selected user's sessions
+  // ---------------------------------------------------------------------------
+
+  const fetchSessions = useCallback(async (userId: string) => {
     setLoadingSessions(true);
-    setError("");
+    setSessions([]);
 
     try {
-      const result = await authClient.admin.listUserSessions({ userId });
-      if (result.error) throw new Error(result.error.message);
+      const result = await authClient.admin.listUserSessions({
+        userId,
+      });
 
-      const response = result.data as SessionListResponse;
-      const list = Array.isArray(response)
+      if (result.error) {
+        throw result.error;
+      }
+
+      const response = result.data as unknown as SessionListResponse;
+
+      const sessionList = Array.isArray(response)
         ? response
         : (response?.sessions ?? []);
-      setSessions(list);
-    } catch (err) {
+
+      setSessions(sessionList);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: getErrorMessage(error),
+      });
+
       setSessions([]);
-      setError(err instanceof Error ? err.message : "Failed to load sessions.");
     } finally {
       setLoadingSessions(false);
     }
   }, []);
 
-  useEffect(() => {
-    void fetchSessions(selectedUserId);
-  }, [selectedUserId, fetchSessions]);
+  // ---------------------------------------------------------------------------
+  // Select user
+  // ---------------------------------------------------------------------------
 
-  const runSessionAction = async (
-    action: () => Promise<{ error?: { message: string } | null }>,
-    successMessage: string,
-  ) => {
-    setActionLoading(true);
-    setError("");
-    setSuccess("");
+  const handleViewSessions = async (user: AdminUser) => {
+    setMessage(null);
+    setSelectedUser(user);
+
+    await fetchSessions(user.id);
+  };
+
+  const handleBackToUsers = () => {
+    setSelectedUser(null);
+    setSessions([]);
+    setMessage(null);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Refresh
+  // ---------------------------------------------------------------------------
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    setMessage(null);
 
     try {
-      const result = await action();
-      if (result.error) throw new Error(result.error.message);
+      await fetchUsers();
 
-      setSuccess(successMessage);
-      await fetchSessions(selectedUserId);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "The action could not be completed.",
-      );
+      if (selectedUserId) {
+        await fetchSessions(selectedUserId);
+      }
     } finally {
-      setActionLoading(false);
+      setRefreshing(false);
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // Session actions
+  // ---------------------------------------------------------------------------
+
   const handleRevokeSession = async (session: UserSession) => {
-    if (!session.token) {
-      setError("This session does not contain a revocation token.");
-      return;
-    }
+    if (!selectedUserId || !session.token) return;
 
     const confirmed = window.confirm(
-      "Revoke this session? The device using it will need to sign in again.",
+      "Are you sure you want to revoke this session?",
     );
+
     if (!confirmed) return;
 
-    await runSessionAction(
-      () => authClient.admin.revokeUserSession({ sessionToken: session.token }),
-      "Session revoked successfully.",
-    );
+    setSessionActionLoading(true);
+    setMessage(null);
+
+    try {
+      const result = await authClient.admin.revokeUserSession({
+        sessionToken: session.token,
+      });
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      setMessage({
+        type: "success",
+        text: "Session revoked successfully.",
+      });
+
+      await fetchSessions(selectedUserId);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: getErrorMessage(error),
+      });
+    } finally {
+      setSessionActionLoading(false);
+    }
   };
 
   const handleRevokeAllSessions = async () => {
-    if (!selectedUserId || sessions.length === 0) return;
+    if (!selectedUserId) return;
 
     if (isManagingOwnSessions) {
-      setError(
-        "For safety, this page will not revoke your own admin sessions. Use the account sign-out option instead.",
-      );
+      setMessage({
+        type: "error",
+        text: "You cannot revoke all sessions of your own account from here.",
+      });
       return;
     }
 
     const confirmed = window.confirm(
-      `Revoke all sessions for ${selectedUser?.name ?? "this user"}? All their signed-in devices will need to sign in again.`,
+      `Are you sure you want to revoke all sessions for ${selectedUser?.name}?`,
     );
+
     if (!confirmed) return;
 
-    await runSessionAction(
-      () => authClient.admin.revokeUserSessions({ userId: selectedUserId }),
-      "All sessions for this user were revoked.",
-    );
+    setSessionActionLoading(true);
+    setMessage(null);
+
+    try {
+      const result = await authClient.admin.revokeUserSessions({
+        userId: selectedUserId,
+      });
+
+      if (result.error) {
+        throw result.error;
+      }
+
+      setMessage({
+        type: "success",
+        text: "All user sessions revoked successfully.",
+      });
+
+      await fetchSessions(selectedUserId);
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: getErrorMessage(error),
+      });
+    } finally {
+      setSessionActionLoading(false);
+    }
   };
+
+  // ---------------------------------------------------------------------------
+  // Impersonation
+  // ---------------------------------------------------------------------------
 
   const handleImpersonate = async () => {
     if (!selectedUserId || !selectedUser) return;
 
-    if (selectedUser.id === currentUserId) {
-      setError("You cannot impersonate your own account.");
-      return;
-    }
-
-    if (selectedUser.role === "admin") {
-      setError("Impersonation of another admin is disabled in this interface.");
-      return;
-    }
-
-    if (isImpersonating) {
-      setError("Stop the current impersonation before starting another one.");
+    if (!canImpersonateSelectedUser) {
+      setMessage({
+        type: "error",
+        text: "You are not allowed to impersonate this user.",
+      });
       return;
     }
 
     const confirmed = window.confirm(
-      `Start an impersonation session as ${selectedUser.name}? Actions will be performed with that user's permissions.`,
+      `Are you sure you want to impersonate ${selectedUser.name}?`,
     );
+
     if (!confirmed) return;
 
-    setActionLoading(true);
-    setError("");
-    setSuccess("");
+    setSessionActionLoading(true);
+    setMessage(null);
 
     try {
       const result = await authClient.admin.impersonateUser({
         userId: selectedUserId,
       });
 
-      if (result.error) throw new Error(result.error.message);
+      if (result.error) {
+        throw result.error;
+      }
 
-      window.location.reload();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to impersonate user.",
-      );
-      setActionLoading(false);
+      window.location.href = "/";
+    } catch (error) {
+      setMessage({
+        type: "error",
+        text: getErrorMessage(error),
+      });
+
+      setSessionActionLoading(false);
     }
   };
 
-  const handleStopImpersonating = async () => {
-    const confirmed = window.confirm(
-      "Stop impersonating and return to your admin account?",
-    );
-    if (!confirmed) return;
+  // ---------------------------------------------------------------------------
+  // Loading state
+  // ---------------------------------------------------------------------------
 
-    setActionLoading(true);
-    setError("");
-
-    try {
-      const result = await authClient.admin.stopImpersonating();
-      if (result.error) throw new Error(result.error.message);
-      window.location.reload();
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to stop impersonating.",
-      );
-      setActionLoading(false);
-    }
-  };
-
-  if (sessionPending) {
+  if (isSessionPending) {
     return (
-      <div className="flex min-h-64 items-center justify-center gap-2 text-sm text-slate-500">
-        <LoaderCircle className="h-5 w-5 animate-spin" />
-        Checking your session...
+      <div className="flex min-h-[300px] items-center justify-center">
+        <Loader2 className="h-7 w-7 animate-spin text-orange-500" />
       </div>
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
+
   return (
     <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+      {/* Header */}
+
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-700">
-            <ShieldCheck className="h-4 w-4" />
-            Administration
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
             Session Management
           </h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">
-            Monitor user sign-ins, revoke sessions and manage support
-            impersonation.
+
+          <p className="mt-1 text-sm text-gray-500">
+            Manage user sessions and impersonation.
           </p>
         </div>
+
         <button
           type="button"
-          onClick={() => void fetchSessions(selectedUserId)}
-          disabled={!selectedUserId || loadingSessions || actionLoading}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={handleRefresh}
+          disabled={refreshing || loadingUsers}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <RefreshCw
-            className={`h-4 w-4 ${loadingSessions ? "animate-spin" : ""}`}
+            className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
           />
-          Refresh sessions
+          Refresh
         </button>
-      </header>
+      </div>
 
-      {isImpersonating && (
-        <section className="flex flex-col justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center">
-          <div className="flex gap-3">
-            <div className="rounded-lg bg-amber-100 p-2 text-amber-700">
-              <ArrowRightLeft className="h-5 w-5" />
-            </div>
-            <div>
-              <p className="font-semibold text-amber-900">
-                Impersonation is active
-              </p>
-              <p className="mt-0.5 text-sm text-amber-800">
-                You are currently acting as another user. Stop impersonation to
-                return to your admin account.
-              </p>
-            </div>
-          </div>
+      {/* Feedback message */}
+
+      {message && (
+        <div
+          className={`flex items-start gap-3 rounded-lg border p-4 ${
+            message.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : "border-red-200 bg-red-50 text-red-800"
+          }`}
+        >
+          {message.type === "success" ? (
+            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+          ) : (
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+          )}
+
+          <p className="text-sm">{message.text}</p>
+
           <button
             type="button"
-            onClick={() => void handleStopImpersonating()}
-            disabled={actionLoading}
-            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-amber-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-800 disabled:opacity-50"
-          >
-            {actionLoading ? (
-              <LoaderCircle className="h-4 w-4 animate-spin" />
-            ) : (
-              <LogOut className="h-4 w-4" />
-            )}
-            Stop impersonating
-          </button>
-        </section>
-      )}
-
-      {error && (
-        <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={() => setError("")}
+            onClick={() => setMessage(null)}
             className="ml-auto"
-            aria-label="Dismiss error"
+            aria-label="Dismiss message"
           >
             <XCircle className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {success && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span>{success}</span>
-          <button
-            type="button"
-            onClick={() => setSuccess("")}
-            className="ml-auto"
-            aria-label="Dismiss success"
-          >
-            <XCircle className="h-4 w-4" />
-          </button>
-        </div>
-      )}
+      {/* Statistics */}
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="rounded-lg bg-slate-100 p-2 text-slate-700">
-            <Users className="h-5 w-5" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-500">Total Users</p>
+            <Users className="h-5 w-5 text-blue-500" />
           </div>
-          <div>
-            <h2 className="font-semibold text-slate-900">Choose a user</h2>
-            <p className="text-xs text-slate-500">
-              Select whose sessions you want to manage.
+
+          <p className="mt-3 text-2xl font-semibold text-gray-900">
+            {totalUsers}
+          </p>
+
+          <p className="mt-1 text-xs text-gray-500">All Registered Users</p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-500">Active Sessions</p>
+            <Activity className="h-5 w-5 text-green-500" />
+          </div>
+
+          <p className="mt-3 text-2xl font-semibold text-gray-900">
+            {selectedUser ? activeSessions.length : "—"}
+          </p>
+
+          <p className="mt-1 text-xs text-gray-500">
+            {selectedUser
+              ? `For ${selectedUser.name}`
+              : "Select a user to view sessions"}
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-500">
+              Expired Sessions
             </p>
+            <Clock className="h-5 w-5 text-orange-500" />
           </div>
-        </div>
 
-        {loadingUsers ? (
-          <div className="flex items-center gap-2 py-3 text-sm text-slate-500">
-            <LoaderCircle className="h-4 w-4 animate-spin" />
-            Loading users...
-          </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] md:items-end">
+          <p className="mt-3 text-2xl font-semibold text-gray-900">
+            {selectedUser ? expiredSessions.length : "—"}
+          </p>
+
+          <p className="mt-1 text-xs text-gray-500">
+            {selectedUser
+              ? `For ${selectedUser.name}`
+              : "Select a user to view sessions"}
+          </p>
+        </div>
+      </div>
+
+      {/* Users section */}
+
+      {!selectedUser && (
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          <div className="flex flex-col gap-4 border-b border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <label
-                htmlFor="session-user"
-                className="mb-1.5 block text-sm font-medium text-slate-700"
-              >
-                User account
-              </label>
-              <select
-                id="session-user"
-                value={selectedUserId}
-                onChange={(event) => {
-                  setSelectedUserId(event.target.value);
-                  setError("");
-                  setSuccess("");
-                }}
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-              >
-                <option value="">Select a user</option>
-                {users.map((user) => (
-                  <option key={user.id} value={user.id}>
-                    {user.name} ({user.email})
-                  </option>
-                ))}
-              </select>
+              <h2 className="text-lg font-semibold text-gray-900">Users</h2>
+
+              <p className="mt-1 text-sm text-gray-500">
+                Select a user to manage their sessions.
+              </p>
             </div>
 
-            {selectedUser ? (
-              <div className="flex flex-col justify-between gap-3 rounded-lg bg-slate-50 p-3 sm:flex-row sm:items-center">
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-                    {selectedUser.name?.charAt(0)?.toUpperCase() || (
-                      <UserRound className="h-5 w-5" />
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => handleSearchChange(event.target.value)}
+                placeholder="Search by name..."
+                className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition placeholder:text-gray-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              />
+            </div>
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Email Verification</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Created At</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody>
+              {loadingUsers ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center">
+                    <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading users...
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : paginatedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="h-32 text-center text-sm text-gray-500"
+                  >
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        {user.image ? (
+                          <img
+                            src={user.image}
+                            alt={user.name}
+                            className="h-9 w-9 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                            <UserRound className="h-4 w-4" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-gray-900">
+                            {user.name}
+                          </p>
+
+                          <p className="truncate text-xs text-gray-500">
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+
+                    <TableCell>
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium capitalize ring-1 ${getRoleStyle(user.role)}`}
+                      >
+                        {user.role || "user"}
+                      </span>
+                    </TableCell>
+
+                    <TableCell>
+                      {user.emailVerified ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Verified
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                          <XCircle className="h-4 w-4" />
+                          Not verified
+                        </span>
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      {user.banned ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700">
+                          <Ban className="h-3 w-3" />
+                          Banned
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Active
+                        </span>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(user.createdAt)}
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleViewSessions(user)}
+                        className="inline-flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-600 transition hover:bg-orange-100"
+                      >
+                        <Monitor className="h-3.5 w-3.5" />
+                        View Sessions
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+
+          {/* Users pagination */}
+
+          <div className="border-t border-gray-200 p-4">
+            <Pagination
+              page={page}
+              lastPage={lastPage}
+              total={totalUsers}
+              limit={limit}
+              onPageChange={handlePageChange}
+              onLimitChange={handleLimitChange}
+              isFetching={loadingUsers}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Selected user sessions */}
+
+      {selectedUser && (
+        <div className="space-y-5">
+          {/* Selected user header */}
+
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <button
+                  type="button"
+                  onClick={handleBackToUsers}
+                  className="mt-1 rounded-lg p-2 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900"
+                  aria-label="Back to users"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+
+                {selectedUser.image ? (
+                  <img
+                    src={selectedUser.image}
+                    alt={selectedUser.name}
+                    className="h-12 w-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-500">
+                    <UserRound className="h-6 w-6" />
+                  </div>
+                )}
+
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {selectedUser.name}
+                  </h2>
+
+                  <p className="text-sm text-gray-500">{selectedUser.email}</p>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span
+                      className={`inline-flex rounded-full bg-white px-2.5 py-1 text-xs font-medium capitalize ring-1 ${getRoleStyle(selectedUser.role)}`}
+                    >
+                      {selectedUser.role || "user"}
+                    </span>
+
+                    {isManagingOwnSessions && (
+                      <span className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
+                        Your account
+                      </span>
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900">
-                      {selectedUser.name}
-                    </p>
-                    <p className="truncate text-xs text-slate-500">
-                      {selectedUser.email}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium capitalize text-slate-600 ring-1 ring-slate-200">
-                    {selectedUser.role ?? "user"}
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void handleImpersonate()}
-                    disabled={
-                      actionLoading ||
-                      isImpersonating ||
-                      selectedUser.role === "admin" ||
-                      selectedUser.id === currentUserId
-                    }
-                    title={
-                      selectedUser.id === currentUserId
-                        ? "You cannot impersonate yourself"
-                        : selectedUser.role === "admin"
-                          ? "Admin impersonation is disabled"
-                          : "Sign in as this user"
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <ArrowRightLeft className="h-3.5 w-3.5" />
-                    Impersonate
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleRevokeAllSessions()}
-                    disabled={
-                      actionLoading ||
-                      sessions.length === 0 ||
-                      isManagingOwnSessions
-                    }
-                    title={
-                      isManagingOwnSessions
-                        ? "Bulk revocation of your own sessions is blocked"
-                        : "Revoke every session for this user"
-                    }
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <LogOut className="h-3.5 w-3.5" />
-                    Revoke all
-                  </button>
                 </div>
               </div>
-            ) : (
-              <p className="text-sm text-slate-500">
-                Select an account to view its sessions.
-              </p>
-            )}
-          </div>
-        )}
-      </section>
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-500">Total sessions</p>
-            <Activity className="h-5 w-5 text-slate-400" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            {loadingSessions ? "—" : sessions.length}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Returned for selected user
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-500">Not expired</p>
-            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            {loadingSessions ? "—" : activeSessions.length}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Based on session expiry time
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-slate-500">Expired</p>
-            <Clock3 className="h-5 w-5 text-slate-400" />
-          </div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">
-            {loadingSessions ? "—" : expiredSessions}
-          </p>
-          <p className="mt-1 text-xs text-slate-400">
-            Still returned by the API
-          </p>
-        </div>
-      </section>
+              <div className="flex flex-wrap gap-2">
+                {!isManagingOwnSessions && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleImpersonate}
+                      disabled={
+                        sessionActionLoading || !canImpersonateSelectedUser
+                      }
+                      title={
+                        !canImpersonateSelectedUser
+                          ? "You are not allowed to impersonate this user"
+                          : "Impersonate user"
+                      }
+                      className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Shield className="h-4 w-4" />
+                      Impersonate
+                    </button>
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col justify-between gap-2 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="font-semibold text-slate-900">User sessions</h2>
-            <p className="mt-0.5 text-sm text-slate-500">
-              Device, IP address, sign-in time and session expiry.
-            </p>
-          </div>
-          {selectedUser && (
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-              <UserRound className="h-3.5 w-3.5" />
-              {selectedUser.name}
-            </span>
-          )}
-        </div>
-
-        {loadingSessions ? (
-          <div className="flex min-h-52 items-center justify-center gap-2 text-sm text-slate-500">
-            <LoaderCircle className="h-5 w-5 animate-spin" />
-            Loading sessions...
-          </div>
-        ) : !selectedUserId ? (
-          <div className="p-12 text-center">
-            <Users className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-3 text-sm font-medium text-slate-700">
-              No user selected
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              Choose a user above to inspect their sessions.
-            </p>
-          </div>
-        ) : sessions.length === 0 ? (
-          <div className="p-12 text-center">
-            <ShieldAlert className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-3 text-sm font-medium text-slate-700">
-              No sessions found
-            </p>
-            <p className="mt-1 text-sm text-slate-500">
-              This user has no sessions returned by the server.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {sessions.map((session) => {
-              const expired =
-                new Date(session.expiresAt).getTime() <= Date.now();
-              const deviceName = getDeviceName(session.userAgent);
-
-              return (
-                <article
-                  key={session.id}
-                  className="flex flex-col justify-between gap-4 p-5 transition hover:bg-slate-50/70 sm:flex-row sm:items-center"
-                >
-                  <div className="flex min-w-0 gap-4">
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                      {/Mobile/i.test(deviceName) ? (
-                        <Smartphone className="h-5 w-5" />
-                      ) : (
-                        <Laptop className="h-5 w-5" />
-                      )}
-                    </div>
-                    <div className="min-w-0 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="font-semibold text-slate-900">
-                          {deviceName}
-                        </h3>
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${expired ? "bg-slate-100 text-slate-500" : "bg-emerald-50 text-emerald-700"}`}
-                        >
-                          {expired ? "Expired" : "Not expired"}
-                        </span>
-                        {session.impersonatedBy && (
-                          <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
-                            Impersonated
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-sm text-slate-500">
-                        {getBrowserName(session.userAgent)}
-                      </p>
-
-                      <div className="flex flex-wrap gap-x-5 gap-y-1 text-xs text-slate-500">
-                        <span className="inline-flex items-center gap-1.5">
-                          <Globe2 className="h-3.5 w-3.5" />
-                          IP: {session.ipAddress || "Not available"}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <Clock3 className="h-3.5 w-3.5" />
-                          Created: {formatDate(session.createdAt)}
-                        </span>
-                        <span className="inline-flex items-center gap-1.5">
-                          <Clock3 className="h-3.5 w-3.5" />
-                          Expires: {formatDate(session.expiresAt)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => void handleRevokeSession(session)}
-                    disabled={actionLoading || !session.token || expired}
-                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-red-200 bg-white px-3.5 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {actionLoading ? (
-                      <LoaderCircle className="h-4 w-4 animate-spin" />
-                    ) : (
+                    <button
+                      type="button"
+                      onClick={handleRevokeAllSessions}
+                      disabled={
+                        sessionActionLoading ||
+                        loadingSessions ||
+                        sessions.length === 0
+                      }
+                      className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
                       <LogOut className="h-4 w-4" />
-                    )}
-                    Revoke session
-                  </button>
-                </article>
-              );
-            })}
+                      Revoke All
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-        )}
-      </section>
 
-      <div className="flex items-start gap-2 rounded-lg border border-blue-100 bg-blue-50/70 p-4 text-xs leading-5 text-blue-800">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-        <p>
-          Session controls depend on the Better Auth admin plugin and backend
-          permissions. Revoking a session signs that user out from the affected
-          device. Impersonation should only be used for authorized support and
-          troubleshooting.
-        </p>
-      </div>
+          {/* Sessions table */}
+
+          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div className="flex flex-col gap-2 border-b border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  User Sessions
+                </h2>
+
+                <p className="mt-1 text-sm text-gray-500">
+                  Sessions associated with this account.
+                </p>
+              </div>
+
+              <span className="text-sm text-gray-500">
+                {sessions.length} session
+                {sessions.length !== 1 ? "s" : ""}
+              </span>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Device / Browser</TableHead>
+                  <TableHead>IP Address</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Expires At</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+
+              <TableBody>
+                {loadingSessions ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-32 text-center">
+                      <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading sessions...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : sessions.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="h-32 text-center text-sm text-gray-500"
+                    >
+                      No sessions found for this user.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sessions.map((session) => {
+                    const DeviceIcon = getDeviceIcon(session.userAgent);
+
+                    const isExpired =
+                      new Date(session.expiresAt).getTime() <= Date.now();
+
+                    return (
+                      <TableRow key={session.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+                              <DeviceIcon className="h-4 w-4" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="font-medium text-gray-900">
+                                {getDeviceName(session.userAgent)}
+                              </p>
+
+                              <p className="text-xs text-gray-500">
+                                {getBrowserName(session.userAgent)}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="whitespace-nowrap text-sm text-gray-600">
+                          {session.ipAddress || "Unknown"}
+                        </TableCell>
+
+                        <TableCell className="whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(session.createdAt)}
+                        </TableCell>
+
+                        <TableCell className="whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(session.expiresAt)}
+                        </TableCell>
+
+                        <TableCell>
+                          {isExpired ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
+                              <Clock className="h-3 w-3" />
+                              Expired
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Not expired
+                            </span>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleRevokeSession(session)}
+                            disabled={
+                              sessionActionLoading ||
+                              !session.token ||
+                              isManagingOwnSessions
+                            }
+                            title={
+                              !session.token
+                                ? "Session token is unavailable"
+                                : isManagingOwnSessions
+                                  ? "You cannot revoke your own session here"
+                                  : "Revoke session"
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <LogOut className="h-3.5 w-3.5" />
+                            Revoke
+                          </button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Session information */}
+
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <div className="flex items-start gap-3">
+              <Shield className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+
+              <div>
+                <p className="text-sm font-medium text-blue-900">
+                  Session security
+                </p>
+
+                <p className="mt-1 text-sm leading-6 text-blue-700">
+                  Revoking a session signs out the associated session. Session
+                  management and impersonation must also be protected by
+                  server-side Better Auth permissions.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

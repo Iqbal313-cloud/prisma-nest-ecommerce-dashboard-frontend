@@ -60,8 +60,12 @@ const statement = {
 export const ac = createAccessControl(statement);
 
 // Super Admin: Full access
+// Super Admin: Full access
 export const superAdmin = ac.newRole({
   ...adminAc.statements,
+
+  user: [...adminAc.statements.user, "impersonate-admins"],
+
   product: ["create", "read", "update", "delete"],
   category: ["create", "read", "update", "delete"],
   order: ["create", "read", "update", "delete"],
@@ -101,6 +105,7 @@ export const manager = ac.newRole({
 export const sales = ac.newRole({
   product: ["read"],
   category: ["read"],
+  supplier: ["read"],
   order: ["create", "read", "update"],
   customer: ["create", "read", "update"],
 });
