@@ -7,22 +7,26 @@ import CustomerTable from "../components/CustomerTable";
 import type { CustomerFilters as CustomerFilterValues } from "../types/customer.types";
 import ErrorMessage from "@/components/common/ErrorMessage";
 import Loading from "@/components/common/Loading";
+import useDebounce from "@/hooks/useDebounce";
 
 export default function CustomerListPage() {
   const [filters, setFilters] = useState<CustomerFilterValues>({});
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
+  // Debounce filters by 500ms
+  const debouncedFilters = useDebounce(filters, 500);
+
+  // Reset pagination when filters change
   useEffect(() => {
     setPage(1);
   }, [filters]);
 
-  const { data, isLoading, isFetching, isError, refetch } =
-    useGetCustomersQuery({
-      ...filters,
-      page,
-      limit,
-    });
+  const { data, isLoading, isFetching, isError } = useGetCustomersQuery({
+    ...debouncedFilters,
+    page,
+    limit,
+  });
 
   const customers = data?.data ?? [];
   const total = data?.meta.total ?? 0;

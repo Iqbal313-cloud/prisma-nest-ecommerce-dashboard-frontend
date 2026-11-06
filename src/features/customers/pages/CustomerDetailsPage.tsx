@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useGetCustomerByIdQuery } from "@/api/customerApi";
+
 import {
   Table,
   TableHeader,
@@ -8,9 +9,6 @@ import {
   TableRow,
   TableCell,
 } from "@/components/common/Table";
-
-
-
 
 function formatDate(value?: string | null) {
   if (!value) return "-";
@@ -191,16 +189,30 @@ export default function CustomerDetailsPage() {
           </div>
 
           <div>
-            <dt className="text-sm text-slate-500">Created at</dt>
+            <dt className="text-sm text-slate-500">Created At</dt>
             <dd className="mt-1 text-sm text-slate-700">
               {formatDate(customer.createdAt)}
             </dd>
           </div>
 
           <div>
-            <dt className="text-sm text-slate-500">Updated at</dt>
+            <dt className="text-sm text-slate-500">Created By</dt>
+            <dd className="mt-1 font-medium text-slate-900">
+              {customer.createdBy?.name ?? "-"}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Updated At</dt>
             <dd className="mt-1 text-sm text-slate-700">
               {formatDate(customer.updatedAt)}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Updated By</dt>
+            <dd className="mt-1 font-medium text-slate-900">
+              {customer.updatedBy?.name ?? "-"}
             </dd>
           </div>
         </dl>

@@ -7,6 +7,12 @@ export interface CustomerFilters {
   phoneNumber?: string;
   address?: string;
   orderStatus?: string;
+  createdByName?: string;
+  updatedByName?: string;
+}
+
+export interface CustomerAuditUser {
+  name: string;
 }
 
 // Query parameters with pagination
@@ -54,6 +60,10 @@ export interface Customer {
   address: string;
   createdAt: string;
   updatedAt: string;
+
+  createdBy?: CustomerAuditUser | null;
+  updatedBy?: CustomerAuditUser | null;
+
   orders?: CustomerOrder[];
 }
 

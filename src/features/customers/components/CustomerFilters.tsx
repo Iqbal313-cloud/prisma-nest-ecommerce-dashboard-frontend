@@ -49,6 +49,20 @@ export default function CustomerFilters({
           value={filters.address ?? ""}
           onChange={(e) => updateFilter("address", e.target.value)}
         />
+
+        <input
+          className={inputClass}
+          placeholder="Created By"
+          value={filters.createdByName ?? ""}
+          onChange={(e) => updateFilter("createdByName", e.target.value)}
+        />
+
+        <input
+          className={inputClass}
+          placeholder="Updated By"
+          value={filters.updatedByName ?? ""}
+          onChange={(e) => updateFilter("updatedByName", e.target.value)}
+        />
       </div>
 
       <div className="mt-4 flex justify-end">
