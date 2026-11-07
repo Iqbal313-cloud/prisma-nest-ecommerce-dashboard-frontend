@@ -82,7 +82,7 @@ Better Auth handles authentication and permission-based access control.
 ### Backend Setup
 
 ```bash
-git clone <backend-repository-url>
+git clone https://gitlab.com/sudoCodeCloud/prisma-nest-ecommerce-api.git
 cd prisma-nest-ecommerce-api
 
 npm install
@@ -99,7 +99,7 @@ npm run start:dev
 ### Frontend Setup
 
 ```bash
-git clone <frontend-repository-url>
+git clone https://gitlab.com/sudoCodeCloud/prisma-nest-ecommerce-dashboard.git
 cd prisma-nest-ecommerce-dashboard
 
 npm install
@@ -107,6 +107,10 @@ npm run dev
 ```
 
 Configure the backend API URL in the frontend environment variables.
+
+🌐 Live Demo
+
+Live Application: https://prisma-nest-ecommerce-dashboard.onrender.com/
 
 ## 🌐 Deployment
 
