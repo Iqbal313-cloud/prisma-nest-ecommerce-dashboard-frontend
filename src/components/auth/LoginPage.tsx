@@ -12,8 +12,8 @@ export default function LoginPage() {
   const from = location.state?.from?.pathname || "/";
   const successMessage = location.state?.message;
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("super-admin@gmail.com");
+  const [password, setPassword] = useState("123456789");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 

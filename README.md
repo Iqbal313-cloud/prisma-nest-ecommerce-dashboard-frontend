@@ -1,75 +1,123 @@
-# React + TypeScript + Vite
+# Prisma Nest Ecommerce Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack e-commerce management dashboard built with **NestJS, Prisma, PostgreSQL, React, and TypeScript**.
 
-Currently, two official plugins are available:
+The application provides role-based access control (PBAC), secure authentication, and tools for managing essential e-commerce operations.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Tech Stack
 
-## React Compiler
+### Backend
+- **Framework:** NestJS
+- **ORM:** Prisma
+- **Database:** Aiven PostgreSQL
+- **Authentication & PBAC:** Better Auth
+- **Caching:** Redis
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Frontend
+- **Library:** React
+- **Language:** TypeScript
+- **API Data Fetching & State Management:** RTK Query
+- **Routing:** React Router
 
-## Expanding the ESLint configuration
+## ✨ Features
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- Secure authentication with Better Auth
+- Permission-Based Access Control (PBAC)
+- Role-based dashboard access
+- Product and category management
+- Order management
+- Customer management
+- Employee management
+- Supplier management
+- Session management
+- Role request and approval workflow
+- API caching with Redis
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 👥 User Roles
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+The application supports the following roles:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Super Admin
+- Admin
+- Manager
+- Sales
+- Accountant
+- Inventory Manager
+- Viewer
 
+Access to application features is controlled through permissions rather than role names alone.
+
+## 🏗️ Architecture
+
+The application follows a separate frontend and backend architecture:
+
+```text
+Frontend (React + TypeScript)
+          |
+          | RTK Query
+          |
+          v
+Backend (NestJS)
+          |
+          | Prisma ORM
+          |
+          v
+Aiven PostgreSQL
+          |
+          v
+Redis Cache
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Better Auth handles authentication and permission-based access control.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## ⚙️ Getting Started
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Prerequisites
 
+- Node.js
+- npm
+- PostgreSQL
+- Redis
+
+### Backend Setup
+
+```bash
+git clone <backend-repository-url>
+cd prisma-nest-ecommerce-api
+
+npm install
 ```
+
+Configure your environment variables in a `.env` file, then run:
+
+```bash
+npx prisma generate
+npx prisma migrate deploy
+npm run start:dev
+```
+
+### Frontend Setup
+
+```bash
+git clone <frontend-repository-url>
+cd prisma-nest-ecommerce-dashboard
+
+npm install
+npm run dev
+```
+
+Configure the backend API URL in the frontend environment variables.
+
+## 🌐 Deployment
+
+- **Backend:** Render
+- **Database:** Aiven PostgreSQL
+- **Frontend:** Vercel
+
+## 📌 Project Status
+
+This project is actively under development.
+
+## 📄 License
+
+This project is developed for learning and portfolio purposes.

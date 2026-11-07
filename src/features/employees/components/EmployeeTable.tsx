@@ -23,9 +23,10 @@ function formatDate(value?: string | null) {
   if (!value) return "-";
 
   const date = new Date(value);
+
   if (Number.isNaN(date.getTime())) return "-";
 
-  return date.toLocaleDateString("en-BD", {
+  return date.toLocaleString("en-BD", {
     timeZone: "Asia/Dhaka",
   });
 }
@@ -80,6 +81,10 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
               <TableHead>Birth date</TableHead>
               <TableHead>Orders</TableHead>
               <TableHead>Photo path</TableHead>
+              <TableHead>Created At</TableHead>
+              <TableHead>Updated At</TableHead>
+              <TableHead>Created By</TableHead>
+              <TableHead>Updated By</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -126,6 +131,29 @@ export default function EmployeeTable({ employees }: EmployeeTableProps) {
                   >
                     {employee.photoPath || "-"}
                   </div>
+                </TableCell>
+                <TableCell>
+                  <span className="whitespace-nowrap text-sm text-slate-700">
+                    {formatDate(employee.createdAt)}
+                  </span>
+                </TableCell>
+
+                <TableCell>
+                  <span className="whitespace-nowrap text-sm text-slate-700">
+                    {formatDate(employee.updatedAt)}
+                  </span>
+                </TableCell>
+
+                <TableCell>
+                  <span className="whitespace-nowrap text-sm text-slate-700">
+                    {employee.createdBy?.name || "-"}
+                  </span>
+                </TableCell>
+
+                <TableCell>
+                  <span className="whitespace-nowrap text-sm text-slate-700">
+                    {employee.updatedBy?.name || "-"}
+                  </span>
                 </TableCell>
 
                 <TableCell>

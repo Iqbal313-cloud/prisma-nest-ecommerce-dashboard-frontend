@@ -17,7 +17,7 @@ function formatDate(value?: string | null) {
 function formatStatus(status: string) {
   return status
     .toLowerCase()
-    .replace(/_/g, " ")
+    .replace(/\_/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
@@ -79,6 +79,7 @@ export default function EmployeeDetailsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div>
         <button
           type="button"
@@ -93,6 +94,7 @@ export default function EmployeeDetailsPage() {
             <h1 className="text-2xl font-bold text-slate-900">
               {employee.firstName} {employee.lastName}
             </h1>
+
             <p className="mt-1 text-sm text-slate-500">
               Employee ID: #{employee.id}
             </p>
@@ -107,6 +109,7 @@ export default function EmployeeDetailsPage() {
         </div>
       </div>
 
+      {/* Employee Information */}
       <section className="rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="text-lg font-semibold text-slate-900">
           Employee Information
@@ -161,14 +164,45 @@ export default function EmployeeDetailsPage() {
               {employee.notes || "-"}
             </dd>
           </div>
+
+          {/* Audit Information */}
+          <div>
+            <dt className="text-sm text-slate-500">Created At</dt>
+            <dd className="mt-1 text-sm text-slate-700">
+              {formatDate(employee.createdAt)}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Updated At</dt>
+            <dd className="mt-1 text-sm text-slate-700">
+              {formatDate(employee.updatedAt)}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Created By</dt>
+            <dd className="mt-1 font-medium text-slate-900">
+              {employee.createdBy?.name || "-"}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Updated By</dt>
+            <dd className="mt-1 font-medium text-slate-900">
+              {employee.updatedBy?.name || "-"}
+            </dd>
+          </div>
         </dl>
       </section>
 
+      {/* Assigned Orders */}
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">
             Assigned Orders
           </h2>
+
           <p className="mt-1 text-sm text-slate-500">
             {orders.length} order{orders.length === 1 ? "" : "s"} returned by
             the API.

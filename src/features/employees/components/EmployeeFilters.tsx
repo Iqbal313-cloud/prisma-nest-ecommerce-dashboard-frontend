@@ -87,6 +87,24 @@ export default function EmployeeFilters({
           <option value="CANCELLED">Cancelled</option>
         </select>
 
+        {/* Created By */}
+        <input
+          type="text"
+          placeholder="Created by"
+          value={filters.createdBy ?? ""}
+          onChange={(e) => updateFilter("createdBy", e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-orange-500"
+        />
+
+        {/* Updated By */}
+        <input
+          type="text"
+          placeholder="Updated by"
+          value={filters.updatedBy ?? ""}
+          onChange={(e) => updateFilter("updatedBy", e.target.value)}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-orange-500"
+        />
+
         <button
           type="button"
           onClick={onReset}

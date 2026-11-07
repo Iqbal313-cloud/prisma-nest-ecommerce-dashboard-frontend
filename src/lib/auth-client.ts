@@ -13,7 +13,10 @@ import {
 } from "./permissions";
 
 export const authClient = createAuthClient({
-  baseURL: "http://localhost:3000",
+  baseURL: "https://prisma-nest-ecommerce-api.onrender.com",
+  fetchOptions: {
+    credentials: "include",
+  },
 
   plugins: [
     adminClient({

@@ -9,6 +9,12 @@ export interface EmployeeFilters {
   orderId?: number;
   orderDate?: string;
   orderStatus?: string;
+  createdBy?: string;
+  updatedBy?: string;
+}
+
+export interface EmployeeAuditUser {
+  name: string;
 }
 
 // Query parameters with pagination
@@ -33,6 +39,11 @@ export interface Employee {
   photoPath: string | null;
   notes: string | null;
   orders?: EmployeeOrder[];
+  createdAt: string;
+  updatedAt: string;
+
+  createdBy?: EmployeeAuditUser | null;
+  updatedBy?: EmployeeAuditUser | null;
   _count?: {
     orders: number;
   };
