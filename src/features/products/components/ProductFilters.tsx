@@ -76,6 +76,8 @@ function ProductFilters({
     !!filters.productName?.trim() ||
     !!filters.slug?.trim() ||
     !!filters.sku?.trim() ||
+    !!filters.createdByName?.trim() ||
+    !!filters.updatedByName?.trim() ||
     filters.categoryId != null ||
     filters.supplierId != null ||
     filters.discontinued !== undefined ||
@@ -305,6 +307,43 @@ function ProductFilters({
                   "maxPrice",
                   event.target.value ? Number(event.target.value) : undefined,
                 )
+              }
+              onKeyDown={handleEnterKey}
+              className={inputClassName}
+            />
+          </div>
+          {/* Created By */}
+          <div className="min-w-0">
+            <label htmlFor="product-created-by" className={labelClassName}>
+              Created By
+            </label>
+
+            <input
+              id="product-created-by"
+              type="text"
+              value={filters.createdByName ?? ""}
+              placeholder="Search creator name..."
+              onChange={(event) =>
+                onFilterChange("createdByName", event.target.value)
+              }
+              onKeyDown={handleEnterKey}
+              className={inputClassName}
+            />
+          </div>
+
+          {/* Updated By */}
+          <div className="min-w-0">
+            <label htmlFor="product-updated-by" className={labelClassName}>
+              Updated By
+            </label>
+
+            <input
+              id="product-updated-by"
+              type="text"
+              value={filters.updatedByName ?? ""}
+              placeholder="Search updater name..."
+              onChange={(event) =>
+                onFilterChange("updatedByName", event.target.value)
               }
               onKeyDown={handleEnterKey}
               className={inputClassName}

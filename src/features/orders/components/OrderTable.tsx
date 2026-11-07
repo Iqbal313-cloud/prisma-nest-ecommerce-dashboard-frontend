@@ -440,6 +440,8 @@ function OrderTable({ orders }: OrderTableProps) {
               <TableHead>Phone Number</TableHead>
               <TableHead>Created At</TableHead>
               <TableHead>Updated At</TableHead>
+              <TableHead>Created By</TableHead>
+              <TableHead>Updated By</TableHead>
               <TableHead>Employee</TableHead>
               <TableHead>Product</TableHead>
               <TableHead>Quantity</TableHead>
@@ -537,6 +539,20 @@ function OrderTable({ orders }: OrderTableProps) {
                                   },
                                 )
                               : "-"}
+                          </span>
+                        </TableCell>
+
+                        {/* Created By */}
+                        <TableCell rowSpan={rowCount}>
+                          <span className="whitespace-nowrap text-sm text-slate-700">
+                            {order.createdBy?.name ?? "N/A"}
+                          </span>
+                        </TableCell>
+
+                        {/* Updated By */}
+                        <TableCell rowSpan={rowCount}>
+                          <span className="whitespace-nowrap text-sm text-slate-700">
+                            {order.updatedBy?.name ?? "N/A"}
                           </span>
                         </TableCell>
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   Activity,
@@ -40,7 +40,6 @@ import useDebounce from "@/hooks/useDebounce";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 10;
-const FETCH_LIMIT = 100;
 
 // -----------------------------------------------------------------------------
 // Types
@@ -113,20 +112,6 @@ const getDeviceName = (userAgent?: string | null) => {
   return "Unknown device";
 };
 
-const getRoleStyle = (role?: string) => {
-  const styles: Record<string, string> = {
-    superAdmin: "bg-violet-100 text-violet-800 ring-violet-300",
-    admin: "bg-rose-100 text-rose-800 ring-rose-300",
-    manager: "bg-sky-100 text-sky-800 ring-sky-300",
-    inventoryManager: "bg-indigo-100 text-indigo-800 ring-indigo-300",
-    accountant: "bg-emerald-100 text-emerald-800 ring-emerald-300",
-    sales: "bg-amber-100 text-amber-800 ring-amber-300",
-    viewer: "bg-slate-100 text-slate-700 ring-slate-300",
-  };
-
-  return styles[role || ""] || "bg-gray-100 text-gray-700 ring-gray-300";
-};
-
 const getBrowserName = (userAgent?: string | null) => {
   if (!userAgent) return "Unknown browser";
 
@@ -147,6 +132,20 @@ const getDeviceIcon = (userAgent?: string | null) => {
   }
 
   return Laptop;
+};
+
+const getRoleStyle = (role?: string) => {
+  const styles: Record<string, string> = {
+    superAdmin: "bg-violet-100 text-violet-800 ring-violet-300",
+    admin: "bg-rose-100 text-rose-800 ring-rose-300",
+    manager: "bg-sky-100 text-sky-800 ring-sky-300",
+    inventoryManager: "bg-indigo-100 text-indigo-800 ring-indigo-300",
+    accountant: "bg-emerald-100 text-emerald-800 ring-emerald-300",
+    sales: "bg-amber-100 text-amber-800 ring-amber-300",
+    viewer: "bg-slate-100 text-slate-700 ring-slate-300",
+  };
+
+  return styles[role || ""] || "bg-gray-100 text-gray-700 ring-gray-300";
 };
 
 const getErrorMessage = (error: unknown) => {
@@ -184,8 +183,14 @@ export default function SessionsPage() {
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 400).trim();
 
+  const [totalUsers, setTotalUsers] = useState(0);
+
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Prevent older requests from overwriting newer results.
+  const usersRequestId = useRef(0);
+  const sessionsRequestId = useRef(0);
 
   // ---------------------------------------------------------------------------
   // Selected user / sessions state
@@ -200,32 +205,10 @@ export default function SessionsPage() {
   const [message, setMessage] = useState<Message | null>(null);
 
   // ---------------------------------------------------------------------------
-  // Client-side filtering
+  // Pagination
   // ---------------------------------------------------------------------------
-
-  const filteredUsers = useMemo(() => {
-    const normalizedSearch = debouncedSearch.toLowerCase();
-
-    if (!normalizedSearch) return users;
-
-    return users.filter((user) =>
-      user.name?.toLowerCase().includes(normalizedSearch),
-    );
-  }, [users, debouncedSearch]);
-
-  // ---------------------------------------------------------------------------
-  // Client-side pagination
-  // ---------------------------------------------------------------------------
-
-  const totalUsers = filteredUsers.length;
 
   const lastPage = Math.max(1, Math.ceil(totalUsers / limit));
-
-  const paginatedUsers = useMemo(() => {
-    const startIndex = (page - 1) * limit;
-
-    return filteredUsers.slice(startIndex, startIndex + limit);
-  }, [filteredUsers, page, limit]);
 
   // ---------------------------------------------------------------------------
   // Selected user derived values
@@ -237,9 +220,7 @@ export default function SessionsPage() {
     Boolean(selectedUserId) && selectedUserId === currentUserId;
 
   const canImpersonateSelectedUser = useMemo(() => {
-    if (!selectedUser || !currentUserRole) {
-      return false;
-    }
+    if (!selectedUser || !currentUserRole) return false;
 
     if (selectedUser.id === currentUserId || selectedUser.banned) {
       return false;
@@ -275,75 +256,67 @@ export default function SessionsPage() {
   }, [sessions]);
 
   // ---------------------------------------------------------------------------
-  // Fetch ALL users
+  // Fetch users - Server-side pagination and search
   // ---------------------------------------------------------------------------
 
   const fetchUsers = useCallback(async () => {
+    const requestId = ++usersRequestId.current;
+
     setLoadingUsers(true);
 
     try {
-      let allUsers: AdminUser[] = [];
-      let total = 0;
-      let offset = 0;
+      const offset = (page - 1) * limit;
 
-      const firstResult = await authClient.admin.listUsers({
+      const result = await authClient.admin.listUsers({
         query: {
-          limit: FETCH_LIMIT,
+          limit,
           offset,
           sortBy: "name",
           sortDirection: "asc",
+          ...(debouncedSearch
+            ? {
+                searchValue: debouncedSearch,
+                searchField: "name",
+                searchOperator: "contains",
+              }
+            : {}),
         },
       });
 
-      if (firstResult.error) {
-        throw firstResult.error;
+      if (result.error) {
+        throw result.error;
       }
 
-      const firstResponse = firstResult.data as unknown as UserListResponse;
+      const response = result.data as unknown as UserListResponse;
 
-      total = firstResponse?.total ?? 0;
-      allUsers = firstResponse?.users ?? [];
+      // Ignore stale responses.
+      if (requestId !== usersRequestId.current) return;
 
-      offset += FETCH_LIMIT;
-
-      while (allUsers.length < total) {
-        const result = await authClient.admin.listUsers({
-          query: {
-            limit: FETCH_LIMIT,
-            offset,
-            sortBy: "name",
-            sortDirection: "asc",
-          },
-        });
-
-        if (result.error) {
-          throw result.error;
-        }
-
-        const response = result.data as unknown as UserListResponse;
-        const nextUsers = response?.users ?? [];
-
-        if (nextUsers.length === 0) break;
-
-        allUsers = [...allUsers, ...nextUsers];
-        offset += FETCH_LIMIT;
-      }
-
-      setUsers(allUsers);
+      setUsers(response?.users ?? []);
+      setTotalUsers(response?.total ?? 0);
     } catch (error) {
+      if (requestId !== usersRequestId.current) return;
+
+      setUsers([]);
+      setTotalUsers(0);
+
       setMessage({
         type: "error",
         text: getErrorMessage(error),
       });
-
-      setUsers([]);
     } finally {
-      setLoadingUsers(false);
+      if (requestId === usersRequestId.current) {
+        setLoadingUsers(false);
+      }
     }
-  }, []);
+  }, [page, limit, debouncedSearch]);
 
   useEffect(() => {
     void fetchUsers();
+
+    return () => {
+      usersRequestId.current++;
+    };
   }, [fetchUsers]);
 
   // ---------------------------------------------------------------------------
@@ -355,6 +328,7 @@ export default function SessionsPage() {
     setPage(DEFAULT_PAGE);
     setSelectedUser(null);
     setSessions([]);
+    setMessage(null);
   };
 
   const handlePageChange = (nextPage: number) => {
@@ -375,6 +349,8 @@ export default function SessionsPage() {
   // ---------------------------------------------------------------------------
 
   const fetchSessions = useCallback(async (userId: string) => {
+    const requestId = ++sessionsRequestId.current;
+
     setLoadingSessions(true);
     setSessions([]);
 
@@ -393,16 +369,22 @@ export default function SessionsPage() {
         ? response
         : (response?.sessions ?? []);
 
+      if (requestId !== sessionsRequestId.current) return;
+
       setSessions(sessionList);
     } catch (error) {
+      if (requestId !== sessionsRequestId.current) return;
+
+      setSessions([]);
+
       setMessage({
         type: "error",
         text: getErrorMessage(error),
       });
-
-      setSessions([]);
     } finally {
-      setLoadingSessions(false);
+      if (requestId === sessionsRequestId.current) {
+        setLoadingSessions(false);
+      }
     }
   }, []);
 
@@ -418,8 +400,11 @@ export default function SessionsPage() {
   };
 
   const handleBackToUsers = () => {
+    sessionsRequestId.current++;
+
     setSelectedUser(null);
     setSessions([]);
+    setLoadingSessions(false);
     setMessage(null);
   };
 
@@ -443,11 +428,11 @@ export default function SessionsPage() {
   };
 
   // ---------------------------------------------------------------------------
-  // Session actions
+  // Revoke single session
   // ---------------------------------------------------------------------------
 
   const handleRevokeSession = async (session: UserSession) => {
-    if (!selectedUserId || !session.token) return;
+    if (!selectedUserId || !session.token || isManagingOwnSessions) return;
 
     const confirmed = window.confirm(
       "Are you sure you want to revoke this session?",
@@ -463,9 +448,7 @@ export default function SessionsPage() {
         sessionToken: session.token,
       });
 
-      if (result.error) {
-        throw result.error;
-      }
+      if (result.error) throw result.error;
 
       setMessage({
         type: "success",
@@ -482,6 +465,10 @@ export default function SessionsPage() {
       setSessionActionLoading(false);
     }
   };
+
+  // ---------------------------------------------------------------------------
+  // Revoke all sessions
+  // ---------------------------------------------------------------------------
 
   const handleRevokeAllSessions = async () => {
     if (!selectedUserId) return;
@@ -508,9 +495,7 @@ export default function SessionsPage() {
         userId: selectedUserId,
       });
 
-      if (result.error) {
-        throw result.error;
-      }
+      if (result.error) throw result.error;
 
       setMessage({
         type: "success",
@@ -557,9 +542,7 @@ export default function SessionsPage() {
         userId: selectedUserId,
       });
 
-      if (result.error) {
-        throw result.error;
-      }
+      if (result.error) throw result.error;
 
       window.location.href = "/";
     } catch (error) {
@@ -616,7 +599,7 @@ export default function SessionsPage() {
         </button>
       </div>
 
-      {/* Feedback message */}
+      {/* Feedback */}
 
       {message && (
         <div
@@ -658,7 +641,9 @@ export default function SessionsPage() {
             {totalUsers}
           </p>
 
-          <p className="mt-1 text-xs text-gray-500">All Registered Users</p>
+          <p className="mt-1 text-xs text-gray-500">
+            {debouncedSearch ? "Matching Users" : "All Registered Users"}
+          </p>
         </div>
 
         <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -698,7 +683,7 @@ export default function SessionsPage() {
         </div>
       </div>
 
-      {/* Users section */}
+      {/* Users */}
 
       {!selectedUser && (
         <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
@@ -746,7 +731,7 @@ export default function SessionsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ) : paginatedUsers.length === 0 ? (
+              ) : users.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={6}
@@ -756,7 +741,7 @@ export default function SessionsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedUsers.map((user) => (
+                users.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -840,7 +825,7 @@ export default function SessionsPage() {
             </TableBody>
           </Table>
 
-          {/* Users pagination */}
+          {/* Pagination */}
 
           <div className="border-t border-gray-200 p-4">
             <Pagination

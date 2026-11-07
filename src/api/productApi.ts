@@ -40,6 +40,8 @@ export const productApi = createApi({
         discontinued,
         minPrice,
         maxPrice,
+        createdByName,
+        updatedByName,
       }) => ({
         url: "products",
 
@@ -69,6 +71,14 @@ export const productApi = createApi({
 
           ...(maxPrice !== undefined && {
             maxPrice,
+          }),
+
+          ...(createdByName?.trim() && {
+            createdByName: createdByName.trim(),
+          }),
+
+          ...(updatedByName?.trim() && {
+            updatedByName: updatedByName.trim(),
           }),
         },
       }),
@@ -106,6 +116,8 @@ export const productApi = createApi({
         discontinued,
         minPrice,
         maxPrice,
+        createdByName,
+        updatedByName,
       }) => ({
         url: "products/export",
 
@@ -133,9 +145,21 @@ export const productApi = createApi({
           ...(maxPrice !== undefined && {
             maxPrice,
           }),
+          ...(createdByName?.trim() && {
+            createdByName: createdByName.trim(),
+          }),
+
+          ...(updatedByName?.trim() && {
+            updatedByName: updatedByName.trim(),
+          }),
         },
 
         responseHandler: async (response) => {
+          if (!response.ok) {
+            const error = await response.json();
+            throw error;
+          }
+
           return response.blob();
         },
       }),

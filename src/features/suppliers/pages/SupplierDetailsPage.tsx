@@ -45,6 +45,8 @@ if (isError || !supplier) {
       "Products",
       String(supplier._count?.products ?? supplier.products?.length ?? 0),
     ],
+    ["Created By", supplier.createdBy?.name],
+    ["Updated By", supplier.updatedBy?.name],
     ["Created At", new Date(supplier.createdAt).toLocaleString()],
     ["Updated At", new Date(supplier.updatedAt).toLocaleString()],
   ];

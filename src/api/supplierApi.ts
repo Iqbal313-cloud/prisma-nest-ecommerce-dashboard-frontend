@@ -42,6 +42,8 @@ export const supplierApi = createApi({
         country,
         phone,
         postalCode,
+        createdByName,
+        updatedByName,
       }) => ({
         url: "suppliers",
 
@@ -56,6 +58,12 @@ export const supplierApi = createApi({
           ...(country && { country }),
           ...(phone && { phone }),
           ...(postalCode && { postalCode }),
+          ...(createdByName?.trim() && {
+            createdByName: createdByName.trim(),
+          }),
+          ...(updatedByName?.trim() && {
+            updatedByName: updatedByName.trim(),
+          }),
         },
       }),
 

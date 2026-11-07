@@ -9,6 +9,8 @@ import {
 
 import CategoryForm from "../components/CategoryForm";
 import type { CreateCategoryPayload } from "../types/category.types";
+import Loading from "@/components/common/Loading";
+import ErrorMessage from "@/components/common/ErrorMessage";
 
 function CategoryEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -61,14 +63,12 @@ function CategoryEditPage() {
   }
 
   if (isCategoryLoading || isTreeLoading) {
-    return <p className="p-6 text-sm text-slate-500">Loading category...</p>;
+    return <Loading message="Loading category..." />;
   }
 
   if (isCategoryError || isTreeError || !category) {
     return (
-      <p role="alert" className="p-6 text-sm text-red-600">
-        Failed to load category or parent category options.
-      </p>
+      <ErrorMessage message="Failed to load category details. Please try again later." />
     );
   }
 

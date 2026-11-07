@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useGetCategoriesQuery, useGetCategoryQuery } from "@/api/categoryApi";
 
 import type { Category } from "../types/category.types";
+import Loading from "@/components/common/Loading";
 
 function findCategoryPath(
   categories: Category[],
@@ -28,8 +29,22 @@ function findCategoryPath(
   return null;
 }
 
+function formatDate(date: string): string {
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "Not available";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(parsedDate);
+}
+
 function CategoryDetailsPage() {
   const { id } = useParams<{ id: string }>();
+
   const categoryId = Number(id);
   const validId = Number.isInteger(categoryId) && categoryId > 0;
 
@@ -37,7 +52,9 @@ function CategoryDetailsPage() {
     data: category,
     isLoading,
     isError,
-  } = useGetCategoryQuery(categoryId, { skip: !validId });
+  } = useGetCategoryQuery(categoryId, {
+    skip: !validId,
+  });
 
   const { data: tree = [] } = useGetCategoriesQuery();
 
@@ -50,7 +67,7 @@ function CategoryDetailsPage() {
   }
 
   if (isLoading) {
-    return <p className="p-6 text-sm text-slate-500">Loading category...</p>;
+    return <Loading/>
   }
 
   if (isError || !category) {
@@ -64,8 +81,16 @@ function CategoryDetailsPage() {
   const path = findCategoryPath(tree, categoryId) ?? [category];
   const children = category.children ?? [];
 
+  const parentCategory =
+    category.parentId === null
+      ? null
+      : path.length > 1
+        ? path[path.length - 2]
+        : null;
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
           <Link
@@ -75,10 +100,12 @@ function CategoryDetailsPage() {
             ← Back to category tree
           </Link>
 
+          {/* Breadcrumb */}
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-500">
             {path.map((item, index) => (
               <span key={item.id} className="flex items-center gap-2">
                 {index > 0 && <span>/</span>}
+
                 <Link
                   to={`/categories/${item.id}`}
                   className={
@@ -87,7 +114,7 @@ function CategoryDetailsPage() {
                       : "hover:text-orange-600"
                   }
                 >
-                  {item.categoryName}
+                  {item.categoryName || `Category #${item.id}`}
                 </Link>
               </span>
             ))}
@@ -110,6 +137,7 @@ function CategoryDetailsPage() {
         </Link>
       </div>
 
+      {/* Category Information */}
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="mb-5 text-lg font-semibold text-slate-900">
           Category information
@@ -119,23 +147,32 @@ function CategoryDetailsPage() {
           <div>
             <dt className="text-sm text-slate-500">Name</dt>
             <dd className="mt-1 font-medium text-slate-800">
-              {category.categoryName}
+              {category.categoryName || "Unnamed category"}
             </dd>
           </div>
 
           <div>
             <dt className="text-sm text-slate-500">Parent category</dt>
+
             <dd className="mt-1 font-medium text-slate-800">
-              {category.parentId == null
-                ? "Root category"
-                : path.length > 1
-                  ? path[path.length - 2].categoryName
-                  : `Category #${category.parentId}`}
+              {category.parentId === null ? (
+                "Root category"
+              ) : parentCategory ? (
+                <Link
+                  to={`/categories/${parentCategory.id}`}
+                  className="text-orange-600 hover:text-orange-700"
+                >
+                  {parentCategory.categoryName}
+                </Link>
+              ) : (
+                `Category #${category.parentId}`
+              )}
             </dd>
           </div>
 
           <div className="sm:col-span-2">
             <dt className="text-sm text-slate-500">Description</dt>
+
             <dd className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
               {category.description || "No description provided."}
             </dd>
@@ -143,12 +180,55 @@ function CategoryDetailsPage() {
         </dl>
       </section>
 
+      {/* Audit Information */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <h2 className="mb-5 text-lg font-semibold text-slate-900">
+          Audit information
+        </h2>
+
+        <dl className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+          <div>
+            <dt className="text-sm text-slate-500">Created by</dt>
+
+            <dd className="mt-1 font-medium text-slate-800">
+              {category.createdBy?.name || "Unknown"}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Last updated by</dt>
+
+            <dd className="mt-1 font-medium text-slate-800">
+              {category.updatedBy?.name || "Unknown"}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Created at</dt>
+
+            <dd className="mt-1 text-sm text-slate-800">
+              {formatDate(category.createdAt)}
+            </dd>
+          </div>
+
+          <div>
+            <dt className="text-sm text-slate-500">Last updated at</dt>
+
+            <dd className="mt-1 text-sm text-slate-800">
+              {formatDate(category.updatedAt)}
+            </dd>
+          </div>
+        </dl>
+      </section>
+
+      {/* Child Categories */}
       <section className="rounded-xl border border-slate-200 bg-white p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-slate-900">
               Child categories
             </h2>
+
             <p className="mt-1 text-sm text-slate-500">
               {children.length} direct children
             </p>
@@ -178,6 +258,7 @@ function CategoryDetailsPage() {
                   <p className="font-medium text-slate-800">
                     {child.categoryName}
                   </p>
+
                   <p className="mt-1 text-xs text-slate-500">
                     {child.description || "No description"}
                   </p>

@@ -89,6 +89,8 @@ function SupplierTable({ suppliers }: SupplierTableProps) {
               <TableHead>Phone</TableHead>
               <TableHead>Products</TableHead>
               <TableHead>Actions</TableHead>
+              <TableHead>Created By</TableHead>
+              <TableHead>Updated By</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -187,6 +189,18 @@ function SupplierTable({ suppliers }: SupplierTableProps) {
                     >
                       Delete
                     </button>
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <div className="min-w-[120px] text-sm text-slate-700">
+                    {supplier.createdBy?.name || "-"}
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <div className="min-w-[120px] text-sm text-slate-700">
+                    {supplier.updatedBy?.name || "-"}
                   </div>
                 </TableCell>
               </TableRow>

@@ -79,6 +79,10 @@ function ProductTable({ products }: ProductTableProps) {
               <TableHead>Stock</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Actions</TableHead>
+              <TableHead>Created By</TableHead>
+              <TableHead>Updated By</TableHead>
+              <TableHead>Created At</TableHead>
+              <TableHead>Updated At</TableHead>
             </TableRow>
           </TableHeader>
 
@@ -198,6 +202,26 @@ function ProductTable({ products }: ProductTableProps) {
                       Delete
                     </button>
                   </div>
+                </TableCell>
+
+                <TableCell>{product.createdBy?.name ?? "Unknown"}</TableCell>
+
+                <TableCell>{product.updatedBy?.name ?? "—"}</TableCell>
+
+                <TableCell>
+                  {product.createdAt
+                    ? new Date(product.createdAt).toLocaleString("en-BD", {
+                        timeZone: "Asia/Dhaka",
+                      })
+                    : "-"}
+                </TableCell>
+
+                <TableCell>
+                  {product.updatedAt
+                    ? new Date(product.updatedAt).toLocaleString("en-BD", {
+                        timeZone: "Asia/Dhaka",
+                      })
+                    : "-"}
                 </TableCell>
               </TableRow>
             ))}

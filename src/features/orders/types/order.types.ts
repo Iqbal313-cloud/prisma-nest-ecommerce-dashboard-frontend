@@ -5,6 +5,10 @@ export type OrderStatus =
   | "DELIVERED"
   | "CANCELLED";
 
+
+  export interface OrderAuditUser {
+    name: string;
+  }
 export interface OrderCustomer {
   id: number;
   firstName: string;
@@ -58,6 +62,8 @@ export interface Order {
   totalAmount?: number;
   createdAt?: string;
   updatedAt?: string;
+  createdBy?: OrderAuditUser | null;
+  updatedBy?: OrderAuditUser | null;
 }
 
 export interface CreateOrderPayload {

@@ -4,6 +4,7 @@ import { useGetCategoriesQuery } from "@/api/categoryApi";
 import CategoryTree from "../components/CategoryTree";
 import type { Category } from "../types/category.types";
 import ErrorMessage from "@/components/common/ErrorMessage";
+import Loading from "@/components/common/Loading";
 
 function countCategories(categories: Category[]): number {
   return categories.reduce(
@@ -18,13 +19,10 @@ function CategoryListPage() {
     isLoading,
     isFetching,
     isError,
-    refetch,
   } = useGetCategoriesQuery();
 
   if (isLoading) {
-    return (
-      <div className="p-6 text-sm text-slate-500">Loading categories...</div>
-    );
+    return <Loading message="Loading category..." />;
   }
 
   if (isError || !categories) {
@@ -34,6 +32,7 @@ function CategoryListPage() {
   }
 
   const totalCategories = countCategories(categories);
+  const nestedCategories = totalCategories - categories.length;
 
   return (
     <div className="space-y-6">
@@ -79,7 +78,7 @@ function CategoryListPage() {
         <div className="rounded-xl border border-slate-200 bg-white p-5">
           <p className="text-sm text-slate-500">Nested categories</p>
           <p className="mt-2 text-3xl font-bold text-slate-900">
-            {totalCategories - categories.length}
+            {nestedCategories}
           </p>
         </div>
       </div>
@@ -98,7 +97,16 @@ function CategoryListPage() {
           )}
         </div>
 
-        <CategoryTree categories={categories} />
+        {categories.length === 0 ? (
+          <div className="px-5 py-12 text-center">
+            <p className="font-medium text-slate-700">No categories found</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Create your first category to get started.
+            </p>
+          </div>
+        ) : (
+          <CategoryTree categories={categories} />
+        )}
       </section>
     </div>
   );

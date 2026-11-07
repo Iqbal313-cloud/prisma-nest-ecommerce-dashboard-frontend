@@ -23,6 +23,12 @@ export interface Supplier {
 
   createdAt: string;
   updatedAt: string;
+  createdBy: SupplierAuditUser | null;
+  updatedBy: SupplierAuditUser | null;
+}
+
+export interface SupplierAuditUser {
+  name: string;
 }
 
 export interface SupplierFilters {
@@ -33,6 +39,8 @@ export interface SupplierFilters {
   country?: string;
   phone?: string;
   postalCode?: string;
+  createdByName?: string;
+  updatedByName?: string;
 }
 
 export interface SupplierQueryParams extends SupplierFilters {

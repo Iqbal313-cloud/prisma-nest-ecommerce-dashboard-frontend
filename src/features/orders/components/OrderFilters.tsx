@@ -168,6 +168,28 @@ function OrderFilters({
           className={inputClass}
         />
 
+        {/* Created By */}
+        <input
+          type="text"
+          value={filters.createdByName ?? ""}
+          placeholder="Created By"
+          onChange={(event) =>
+            onFilterChange("createdByName", event.target.value || undefined)
+          }
+          className={inputClass}
+        />
+
+        {/* Updated By */}
+        <input
+          type="text"
+          value={filters.updatedByName ?? ""}
+          placeholder="Updated By"
+          onChange={(event) =>
+            onFilterChange("updatedByName", event.target.value || undefined)
+          }
+          className={inputClass}
+        />
+
         {/* Product name */}
         <input
           type="text"

@@ -190,6 +190,14 @@ function OrderDetailsPage() {
           <InfoItem label="Order Date" value={formatDate(order.orderDate)} />
 
           <InfoItem label="Order Status" value={order.orderStatus} />
+
+          <InfoItem label="Created By" value={order.createdBy?.name ?? "N/A"} />
+
+          <InfoItem label="Updated By" value={order.updatedBy?.name ?? "N/A"} />
+
+          <InfoItem label="Created at" value={formatDate(order.createdAt)} />
+          
+          <InfoItem label="Updated at" value={formatDate(order.updatedAt)} />
         </div>
       </section>
 

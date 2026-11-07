@@ -9,6 +9,8 @@ export interface ProductFilters {
   discontinued?: boolean;
   minPrice?: number;
   maxPrice?: number;
+  createdByName?: string;
+  updatedByName?: string;
 }
 
 // Query parameters sent to the API
@@ -28,6 +30,10 @@ export interface ProductSupplier {
   supplierName: string;
 }
 
+export interface ProductAuditUser {
+  name: string;
+}
+
 export interface Product {
   id: number;
   productName: string;
@@ -42,6 +48,8 @@ export interface Product {
   discontinued: boolean;
   category: ProductCategory | null;
   supplier: ProductSupplier | null;
+  createdBy: ProductAuditUser | null;
+  updatedBy: ProductAuditUser | null;
   createdAt: string;
   updatedAt: string;
 }

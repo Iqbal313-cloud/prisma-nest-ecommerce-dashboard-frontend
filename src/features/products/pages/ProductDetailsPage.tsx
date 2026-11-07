@@ -259,10 +259,12 @@ function ProductDetailsPage() {
           <InfoItem label="Product ID" value={String(product.id)} />{" "}
           <InfoItem label="SKU" value={product.sku} />{" "}
           <InfoItem label="Created At" value={formatDate(product.createdAt)} />{" "}
+          <InfoItem label="Updated At" value={formatDate(product.updatedAt)} />
           <InfoItem
-            label="Updated At"
-            value={formatDate(product.updatedAt)}
-          />{" "}
+            label="Created By"
+            value={product.createdBy?.name ?? "Unknown"}
+          />
+          <InfoItem label="Updated By" value={product.updatedBy?.name ?? "—"} />
         </div>{" "}
       </section>{" "}
     </div>

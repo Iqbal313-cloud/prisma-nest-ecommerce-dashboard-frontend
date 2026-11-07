@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-
 import type { SupplierQueryParams } from "../types/supplier.types";
-import {  RotateCcw, SlidersHorizontal } from "lucide-react";
+import { RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 
 interface SupplierFiltersProps {
   filters: SupplierQueryParams;
@@ -17,6 +16,8 @@ const fields = [
   { key: "country", label: "Country" },
   { key: "phone", label: "Phone" },
   { key: "postalCode", label: "Postal Code" },
+  { key: "createdByName", label: "Created By" },
+  { key: "updatedByName", label: "Updated By" },
 ] as const;
 
 type SearchField = (typeof fields)[number]["key"];
@@ -29,13 +30,11 @@ function SupplierFilters({ filters, onChange, onReset }: SupplierFiltersProps) {
     return searchFilters;
   });
 
-  // Sync local inputs when parent filters are reset or updated externally
   useEffect(() => {
     const { page, limit, ...searchFilters } = filters;
     setLocalFilters(searchFilters);
   }, [filters]);
 
-  // Send search filters to parent only after 500ms of inactivity
   useEffect(() => {
     const timer = setTimeout(() => {
       const updatedFilters: SupplierQueryParams = {
@@ -80,6 +79,14 @@ function SupplierFilters({ filters, onChange, onReset }: SupplierFiltersProps) {
     }));
   };
 
+  const handleSearch = () => {
+    onChange({
+      ...localFilters,
+      page: 1,
+      limit: filters.limit ?? 10,
+    });
+  };
+
   return (
     <div className="rounded-lg border border-slate-200 bg-white p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -118,6 +125,17 @@ function SupplierFilters({ filters, onChange, onReset }: SupplierFiltersProps) {
             />
           </div>
         ))}
+      </div>
+
+      <div className="mt-4 flex justify-end">
+        <button
+          type="button"
+          onClick={handleSearch}
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-orange-500 px-5 py-2 text-sm font-medium text-white transition hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+        >
+          <Search size={16} />
+          Search
+        </button>
       </div>
     </div>
   );
