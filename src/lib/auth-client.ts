@@ -13,7 +13,7 @@ import {
 } from "./permissions";
 
 export const authClient = createAuthClient({
-  baseURL: "https://prisma-nest-ecommerce-api.onrender.com",
+  baseURL: import.meta.env.VITE_API_BASE_URL.replace(/\/api\/v1\/?$/, ""),
   fetchOptions: {
     credentials: "include",
   },
